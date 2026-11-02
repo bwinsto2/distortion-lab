@@ -332,3 +332,40 @@ class TestPresentationBoundary(unittest.TestCase):
         self.assertEqual(plan["rasters"]["reconstruction"], M.render_gray(s["work"]["recon"], 64, {"diameter": lay["diameter"], "sigma": lay["sigma"], "aperture": lay["aperture"]}))
         s["layout"]["visibility"] = "blank"
         self.assertFalse(any(p["visible"] for p in stimulus_plan(s, 1000, 600)["panels"]))
+
+
+class TestClaudeCodeProvider(ServerCase):
+    """Uses tests/fake_claude.py in place of the real `claude` CLI."""
+    env = {"DISTORTION_LAB_AI": "claude-code", "DISTORTION_LAB_CLAUDE_BIN": os.path.join(ROOT, "tests", "fake_claude.py")}
+
+    def setUp(self):
+        self._saved = os.environ.get("ANTHROPIC_API_KEY")
+        os.environ["ANTHROPIC_API_KEY"] = "sk-must-not-be-passed"   # must be stripped for the child process
+
+    def tearDown(self):
+        if self._saved is None:
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+        else:
+            os.environ["ANTHROPIC_API_KEY"] = self._saved
+
+    def test_check_and_propose_use_plan_signin_without_tools(self):
+        code, j = self.req("GET", "/api/ai/status")
+        self.assertIn("not yet verified", j["ai"]["label"])
+        code, j = self.req("POST", "/api/ai/check", {})
+        self.assertTrue(j["ai"]["connected"], j)
+        self.assertIn("your plan", j["ai"]["label"])
+        s = self.example()
+        ctx = {"renderer": "semantic-grating", "description": {"text": "more wavy", "region": None, "properties": []}}
+        code, j = self.req("POST", "/api/ai/propose", {"work": s["work"], "context": ctx})
+        self.assertEqual(code, 200, j)
+        self.assertEqual(j["provider"], "claude-code")
+        good = [c for c in j["candidates"] if c["recon"]]
+        bad = [c for c in j["candidates"] if not c["recon"]]
+        self.assertEqual(good[0]["recon"]["params"]["bendAmount"], 0.2)
+        self.assertIn("pinned", bad[0]["rejected"][0]["reason"])
+
+    def test_missing_binary_reported(self):
+        b = Bridge({"DISTORTION_LAB_AI": "claude-code", "DISTORTION_LAB_CLAUDE_BIN": ""})
+        b.claude_bin = None
+        self.assertFalse(b.status()["connected"])
+        self.assertIn("not found", b.status()["detail"])

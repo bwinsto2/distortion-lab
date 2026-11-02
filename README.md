@@ -10,9 +10,24 @@ browser UI. No internet connection, accounts or AI are needed.
 
 ![Gallery](docs/screenshots/01-gallery.png)
 
+## Install once, then get updates automatically
+
+On the lab Mac, open Terminal and clone the repository once:
+
+```bash
+cd ~ && git clone https://github.com/bwinsto2/distortion-lab.git
+```
+
+(If macOS offers to install the developer command-line tools for `git`, accept.) After that, the launchers run
+`git pull` every time they start, so new versions pushed to GitHub arrive automatically. Your session data in `data/`
+is never touched by updates. To skip the update for a run, start it with `DISTORTION_LAB_NO_UPDATE=1`. Every saved
+session records the software version it was made with.
+
 ## Start it
 
-**macOS:** double-click **`Distortion Lab.command`**. The first time, right-click → Open to approve it.
+**macOS:** in Finder, open the `distortion-lab` folder in your home folder and double-click **`Distortion Lab.command`**,
+or **`Distortion Lab (with Claude).command`** for AI suggestions through your Claude plan
+(one-time setup in [docs/AI_BRIDGE.md](docs/AI_BRIDGE.md)). The first time, right-click → Open to approve it.
 **Any system:**
 
 ```bash
@@ -88,7 +103,7 @@ the stereoscope does.
 | [docs/MODEL.md](docs/MODEL.md) | equations for both renderers, proposals, pins, provenance and **limitations** |
 | [docs/PARAMETERS.md](docs/PARAMETERS.md) | every control: range, steps, proposal size, default |
 | [docs/API.md](docs/API.md) | controller API (mouse = keyboard = dials = scripts), backend endpoints, dial relay, session format, dev requests |
-| [docs/AI_BRIDGE.md](docs/AI_BRIDGE.md) | optional, opt-in AI suggestions (bounded validated operations; off by default) |
+| [docs/AI_BRIDGE.md](docs/AI_BRIDGE.md) | optional AI suggestions: Claude through your Claude plan (recommended), or OpenAI API; off by default |
 | [docs/TESTING.md](docs/TESTING.md) | how to run the tests and the results of this build |
 | [psychopy/](psychopy/) | untested PsychoPy display example built on `distortion_lab/presentation.py` |
 | [examples/](examples/) | synthetic session, semantic gallery JSON, rendered example images |
@@ -120,8 +135,8 @@ After editing `shared/*.json`, run `python3 tools/build_data.py` and `python3 to
 - The semantic generator (masks, warps, breaks) is our explicit construction and is **not part of the Olianezhad et al.
   model**. The ten original forms are independent illustrative constructions, not fitted parameters or participant
   percepts. The *abrupt offset* and *three-branch gap* forms are known approximations. See [docs/MODEL.md](docs/MODEL.md).
-- The OpenAI path of the AI bridge has not been exercised against the live service (no credentials were available).
-  The PsychoPy adapter is an untested example.
+- The Claude-plan AI option was tested live through Claude Code. The OpenAI API option has not been exercised
+  against the live service (no credentials were available). The PsychoPy adapter is an untested example.
 
 Source for the original synthesis family: Olianezhad et al. (2025), J. Neurosci.,
 DOI [10.1523/JNEUROSCI.1111-25.2025](https://doi.org/10.1523/JNEUROSCI.1111-25.2025).

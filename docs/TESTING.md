@@ -38,7 +38,7 @@ Environment: Linux, Python 3.13.18 and Python 3.9.25 (backend suite run under bo
 | Suite | Result |
 |---|---|
 | `tools/build_data.py --check` (generated browser data matches `shared/`) | up to date |
-| Python `unittest` (backend, model, AI bridge, presentation boundary, parity): 21 tests | **OK** under 3.13 and 3.9 |
+| Python `unittest` (backend, model, AI bridge incl. Claude Code provider via a stand-in CLI, presentation boundary, parity): 23 tests | **OK** under 3.13 and 3.9 |
 | Node core tests: 24 tests | **24 pass, 0 fail** |
 | Browser end-to-end (Playwright/Chromium against the real backend): 17 steps | **17/17 pass** |
 
@@ -76,7 +76,8 @@ inversion rather than a step or shift.
 ### What the tests do not show
 
 Software tests check behaviour and image/parameter consistency. They do **not** establish perceptual validity,
-uniqueness of a match, faithful replication of published drawings, display gamma or timing accuracy. The OpenAI
-provider was not called live (no credentials). The PsychoPy example was only syntax-checked. Its data boundary
+uniqueness of a match, faithful replication of published drawings, display gamma or timing accuracy. The Claude Code
+provider was also run live once (connection check plus one suggestion request through the backend; 4 valid candidates).
+The OpenAI provider was not called live (no credentials). The PsychoPy example was only syntax-checked. Its data boundary
 (`distortion_lab/presentation.py`) is unit-tested. The UI was exercised in Chromium only; Safari and Firefox were not
 tested.

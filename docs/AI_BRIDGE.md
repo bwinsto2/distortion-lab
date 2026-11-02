@@ -21,7 +21,43 @@ When the participant has described a remaining difference, the experimenter can 
 
 No generated code is executed, the live experiment is not altered, and the renderer stays deterministic.
 
-## Enabling OpenAI (opt-in)
+## Recommended: Claude through your Claude plan (no API key, no extra billing)
+
+This uses **Claude Code**, Anthropic's command-line tool, signed in with your Claude Pro or Max account. Requests count
+against your plan's included usage, like using Claude in the app. When you reach the plan's usage limit, suggestions
+stop until it resets. Nothing is billed unless you have turned on paid extra usage in your Claude account settings.
+
+**One-time setup on the lab Mac**
+
+1. Install Claude Code: see https://docs.anthropic.com/en/docs/claude-code (the native installer needs no other tools).
+2. In Terminal, run `claude` once and sign in with **your Claude account** (the subscription option, not an API/Console key). Then type `/exit`.
+
+**Use**: double-click **`Distortion Lab (with Claude).command`**, or run `DISTORTION_LAB_AI=claude-code python3 run.py`.
+In the Experimenter tab, press **Check AI connection**. The pill should read **"AI connected (Claude, your plan)"**.
+
+What the backend does on each request (`distortion_lab/ai_bridge.py`):
+
+- It runs `claude -p` non-interactively, in an empty temporary folder.
+- **All tools are disabled** (`--tools ""`), and MCP servers, settings files and session saving are turned off. Claude
+  can only read the prompt and answer.
+- The answer must match the operations JSON schema (`--json-schema`), and the app then validates it as described above.
+- `ANTHROPIC_API_KEY` and similar variables are **removed** from Claude Code's environment, so it uses your plan
+  sign-in rather than an API key, even if one happens to be set on the computer.
+- It times out after 3 minutes. Typical replies take 10–40 s.
+- Optional settings: `DISTORTION_LAB_CLAUDE_MODEL` (e.g. `sonnet`) chooses the model. `DISTORTION_LAB_CLAUDE_BIN` sets
+  the path to `claude` if it isn't found automatically.
+
+Tested on 2026-11-02 with Claude Code 2.1.316. A real suggestion request through the backend returned four candidates,
+all valid and none touching a pinned field. An offline stand-in (`tests/fake_claude.py`) checks the flags, the empty
+folder and the removal of API-key variables in the automated tests.
+
+Privacy: descriptions go to Anthropic under your personal account's terms. Check your Claude privacy settings (for
+example, whether chats may be used for model training) and your ethics approval before using it with participants.
+
+The same approach would work with **Codex** signed in with ChatGPT Plus (`codex exec`). It isn't implemented yet; ask
+if you want it.
+
+## Enabling OpenAI API (opt-in, billed separately)
 
 Set these in the environment of the **backend** process. The key is never placed in browser JavaScript.
 
