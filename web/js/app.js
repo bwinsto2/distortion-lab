@@ -769,6 +769,7 @@
   // ------------------------------------------------------------------ startup
   function start() {
     $('version').textContent = 'v' + C.VERSION;
+    if (window.DL_PREVIEW_NOTE) ['openStimulus', 'saveJson', 'pngRecon', 'pngRef', 'pngDisplay', 'serverExport', 'devRequest'].forEach(function (id) { $(id).hidden = true; });
     var saved = null;
     try { var raw = localStorage.getItem(LS_KEY); if (raw) saved = C.validateSession(JSON.parse(raw)); } catch (e) { saved = null; }
     S = C.newSession(saved ? { reference: saved.reference, layout: saved.layout } : {});
@@ -791,6 +792,7 @@
     }).catch(function () {
       backend = false;
       $('backendStatus').textContent = 'Browser-only'; $('backendStatus').className = 'pill off';
+      if (window.DL_PREVIEW_NOTE) $('browserOnly').innerHTML = window.DL_PREVIEW_NOTE;
       $('browserOnly').hidden = false; updateAiUi(); scheduleSave();
     });
   }

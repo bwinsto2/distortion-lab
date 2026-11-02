@@ -105,7 +105,8 @@ web/                                       console (index.html), stimulus window
                                            draw.js, app.js, data.js (generated from shared/)
 shared/                                    parameters.json (single schema source), legacy-presets.json
 tests/                                     Python unittest, Node core tests, Playwright end-to-end
-tools/                                     build_data, param_table, make_examples, render_examples, run_tests, make_zip
+tools/                                     build_data, param_table, make_examples, render_examples, run_tests, make_zip,
+                                           build_preview (single-file browser-only preview)
 ```
 
 After editing `shared/*.json`, run `python3 tools/build_data.py` and `python3 tools/param_table.py`.
