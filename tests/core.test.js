@@ -265,7 +265,16 @@ test('Keep current never changes the reconstruction; choosing updates it and rec
   assert.equal(C.chooseCandidate(s, rec.id, 'keep'), false);
   assert.equal(J(s.work), before); assert.equal(s.undo.length, undoLen);
   assert.equal(rec.choice, 'keep');
-  assert.throws(() => C.chooseCandidate(s, rec.id, 'p0'), /already/);
+  // changing one's mind after Keep current is allowed (still the same base)
+  C.chooseCandidate(s, rec.id, 'p0');
+  assert.equal(J(s.work.recon), J(rec.candidates[0].recon));
+  assert.throws(() => C.chooseCandidate(s, rec.id, 'p1'), /already chose/);
+  C.undo(s);
+  assert.equal(J(s.work), before, 'undo returns to the set base');
+  C.chooseCandidate(s, rec.id, 'p1');
+  assert.equal(J(s.work.recon), J(rec.candidates[1].recon), 'a different choice after undo');
+  assert.deepEqual(rec.choices.map((c) => c.choice), ['keep', 'p0', 'p1']);
+  C.undo(s);
   const rec2 = C.requestAlternatives(s, {});
   C.chooseCandidate(s, rec2.id, 'p2');
   assert.equal(J(s.work.recon), J(rec2.candidates[2].recon));

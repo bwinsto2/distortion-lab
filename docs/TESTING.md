@@ -40,7 +40,7 @@ Environment: Linux, Python 3.13.18 and Python 3.9.25 (backend suite run under bo
 | `tools/build_data.py --check` (generated browser data matches `shared/`) | up to date |
 | Python `unittest` (backend, model, AI bridge incl. Claude Code provider via a stand-in CLI, presentation boundary, parity): 23 tests | **OK** under 3.13 and 3.9 |
 | Node core tests: 24 tests | **24 pass, 0 fail** |
-| Browser end-to-end (Playwright/Chromium against the real backend): 17 steps | **17/17 pass** |
+| Browser end-to-end (Playwright/Chromium against the real backend): 18 steps | **18/18 pass** |
 
 ### What is covered
 
@@ -51,7 +51,7 @@ Environment: Linux, Python 3.13.18 and Python 3.9.25 (backend suite run under bo
 | Pins are never changed by proposals, gallery, combinations, AI operations or dials; impossible cases are refused with an explanation and no state change | core randomised pin test (25 trials × 6 foci × 2 scales); e2e pinned slider, refused legacy switch, dial on pinned field; backend mock-AI test |
 | Coarse/fine spacing and repeated smaller neighbourhoods | core `coarse vs fine…` (measured mean step ≈1×, ≈0.25×, ≈0.36× at round 2); e2e repeat round |
 | Deterministic seeded alternatives, reproducible from recorded settings | core `seeded proposals are deterministic…` |
-| Keep current changes nothing; choosing updates the reconstruction and sliders | core and e2e |
+| Keep current changes nothing; choosing updates the reconstruction and sliders; preview shows a candidate large without changing anything; undo allows a different choice | core and e2e |
 | Combined features (two families; overlap explained) | core `combining two feature families…`; e2e more-than-one |
 | Controls do what they advertise (bend, zigzag/step, offset, gap size/position/residual/shape, breaks, crossing, global) | core equation-level checks against docs/MODEL.md |
 | Semantic "unchanged reference" equals the reference grating pixel for pixel | core and in-app check |

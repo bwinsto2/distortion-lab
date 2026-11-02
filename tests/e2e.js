@@ -98,7 +98,7 @@ function post(port, p, body) {
     assert(set.candidates.length > 0, 'candidates shown');
     assert(set.candidates.every((c) => c.recon.params.bendAmount === pinnedVal), 'pin respected');
     await shot('03-compare');
-    await page.click('text=Choose B');
+    await page.click('#candidates button:has-text("Choose B")');
     const w = await work();
     assert(J(w.recon) === J(set.candidates[1].recon), 'candidate applied');
     await page.click('[data-tab=adjust]');
@@ -113,7 +113,7 @@ function post(port, p, body) {
     await page.click('#repeatAlts');
     let s = await sess();
     assert(s.proposals[s.proposals.length - 1].settings.round === 1, 'round 1');
-    await page.click('text=Keep current');
+    await page.click('#candidates button:has-text("Keep current")');
     assert(J(await work()) === before);
     s = await sess();
     assert(s.proposals[s.proposals.length - 1].choice === 'keep');
@@ -121,6 +121,37 @@ function post(port, p, body) {
     await page.click('#showAlts');
     s = await sess();
     assert(s.proposals[s.proposals.length - 1].settings.scale === 'fine');
+  });
+
+  await step('preview a candidate large without choosing; choose from preview; undo and choose another', async () => {
+    await page.click('[data-tab=alternatives]');
+    await page.check('input[name=propScale][value=coarse]');
+    await page.click('#showAlts');
+    const before = J(await work());
+    const s = await sess();
+    const set = s.proposals[s.proposals.length - 1];
+    await page.click('#candidates [data-id="p1"] canvas');
+    assert((await page.textContent('#reconTitle')).includes('Previewing B'), 'preview title');
+    assert(J(await work()) === before, 'preview does not change the reconstruction');
+    const big = await page.evaluate(() => { const c = document.getElementById('reconCanvas'); return c.toDataURL(); });
+    await page.keyboard.press('ArrowRight');
+    assert((await page.textContent('#reconTitle')).includes('Previewing C'), 'arrow cycles');
+    const big2 = await page.evaluate(() => document.getElementById('reconCanvas').toDataURL());
+    assert(big !== big2, 'large view changes with preview');
+    await page.check('#bigCands');
+    assert(await page.evaluate(() => document.getElementById('candidates').classList.contains('big')));
+    await shot('03b-preview');
+    await page.click('#previewChoose');
+    assert(J((await work()).recon) === J(set.candidates[2].recon), 'chose C from preview');
+    assert((await page.textContent('#reconTitle')) === 'Current reconstruction');
+    assert(await page.isVisible('#candidates [data-id="p0"]'), 'alternatives still visible after choosing');
+    await page.click('#undo');
+    assert(J(await work()) === before, 'undo back to the set base');
+    await page.click('#candidates button:has-text("Choose A")');
+    assert(J((await work()).recon) === J(set.candidates[0].recon), 'different choice after undo');
+    const rec = (await sess()).proposals.find((p) => p.id === set.id);
+    assert(J(rec.choices.map((c) => c.choice)) === J(['p2', 'p0']), J(rec.choices));
+    await page.uncheck('#bigCands');
   });
 
   await step('more-than-one: combine two features; pins kept; choice revisable', async () => {

@@ -58,7 +58,9 @@ dials. In this mode, autosave goes only to the browser's local storage.
 3. **Compare.** **Show alternatives** shows four nearby versions next to the current one. They mix single and
    coordinated two-parameter changes, are deterministic and seeded, and use coarse or fine spacing.
    **More, closer to current** repeats with a smaller neighbourhood. Choosing one updates the same reconstruction and
-   its sliders. **Keep current** changes nothing. The focus can be a single feature.
+   its sliders. **Keep current** changes nothing. The focus can be a single feature. **Click any picture** to preview it
+   full size, in the main view and the stimulus window, without choosing it. ← → flip between them, and *large pictures* enlarges
+   the tiles. After choosing, **Undo** returns to the same alternatives so a different one can be chosen.
 4. **Still different?** Captures the participant's **verbatim** description, an optional dragged area on the picture,
    and optional property hints. From here you can request alternatives focused on a property, record an outcome
    (*matches, close, can't be matched, keeps changing, can't tell, can't see it*), ask the optional AI bridge, or export

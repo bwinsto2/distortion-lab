@@ -78,6 +78,11 @@ legend { font-size: 12.5px; color: var(--muted); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; margin: 10px 0; }
 .grid.cand { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.grid.cand.big { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.tile.previewing { outline: 3px solid var(--accent); outline-offset: 1px; }
+.tile.stale { opacity: .6; }
+.preview-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; padding: 6px 8px; border-radius: 6px; background: var(--active); font-size: 13px; }
+.preview-bar[hidden] { display: none; }
 .tile { border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: var(--tile); text-align: center; cursor: pointer; position: relative; }
 .tile:hover { border-color: var(--accent); }
 .tile.selected { outline: 3px solid var(--accent); }

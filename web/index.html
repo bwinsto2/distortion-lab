@@ -42,7 +42,12 @@
         <canvas id="reconCanvas" width="360" height="360" aria-label="Current reconstruction"></canvas>
         <div id="markOverlay" class="mark" hidden></div>
       </div>
-      <figcaption>Current reconstruction <span id="reconInfo" class="muted researcher"></span></figcaption>
+      <div id="previewBar" class="preview-bar" hidden>
+        <span id="previewText"></span>
+        <button id="previewChoose" class="primary small">Choose</button>
+        <button id="previewBack" class="small">Back to current</button>
+      </div>
+      <figcaption><span id="reconTitle">Current reconstruction</span> <span id="reconInfo" class="muted researcher"></span></figcaption>
     </figure>
     <figure class="view">
       <canvas id="refCanvas" width="160" height="160" aria-label="Reference grating"></canvas>
@@ -115,6 +120,11 @@
         <label><input type="radio" name="propScale" value="coarse" checked> larger differences</label>
         <label><input type="radio" name="propScale" value="fine"> smaller differences</label>
         <label class="toggle" title="Each repeat around the same version uses smaller differences"><input type="checkbox" id="shrink" checked> shrink on repeat</label>
+      </div>
+      <div class="row wrap">
+        <label class="toggle"><input type="checkbox" id="bigCands"> large pictures</label>
+        <label class="toggle researcher" title="While previewing, the stimulus window shows the previewed version in the reconstruction position"><input type="checkbox" id="previewOnStim" checked> show previews in the stimulus window</label>
+        <span class="muted">Click a picture to see it large (← → to flip between them). Nothing changes until you choose.</span>
       </div>
       <div class="row">
         <button id="showAlts" class="primary">Show alternatives</button>

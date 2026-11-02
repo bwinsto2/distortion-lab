@@ -13,7 +13,7 @@
   var backend = false, aiStatus = { provider: 'none', connected: false, label: 'AI off', detail: '' };
   var ui = { tab: 'gallery', selectedComponent: null, multi: false, multiSel: [], comboSet: null, currentSet: null, marking: false,
     region: null, structureKey: null, galleryKey: null, seqStart: Date.now(), stimWin: null, display: null, pendingResume: false,
-    descContext: 'still-different', saveState: { local: null, server: null, error: null }, lastDesc: null, aiSet: null };
+    preview: null, descContext: 'still-different', saveState: { local: null, server: null, error: null }, lastDesc: null, aiSet: null };
   var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('distortion-lab-v2') : null;
 
   // ------------------------------------------------------------------ helpers
@@ -75,7 +75,7 @@
     undo: function () { return act(function () { var r = C.undo(S); if (!r) toast('Nothing to undo'); return r; }, true); },
     redo: function () { return act(function () { var r = C.redo(S); if (!r) toast('Nothing to redo'); return r; }, true); },
     chooseGallery: function (id) { return act(function () { return C.chooseGallery(S, id); }); },
-    requestAlternatives: function (o) { var r = act(function () { return C.requestAlternatives(S, o || {}); }); if (r) { ui.currentSet = r.id; refresh(); } return r; },
+    requestAlternatives: function (o) { ui.preview = null; var r = act(function () { return C.requestAlternatives(S, o || {}); }); if (r) { ui.currentSet = r.id; refresh(); } return r; },
     choose: function (setId, candId) { return act(function () { return C.chooseCandidate(S, setId, candId); }); },
     combine: function (a, b) { return act(function () { return C.combine(S, a, b); }); },
     setLayout: function (k, v) { return act(function () { return C.setLayout(S, k, v); }); },
@@ -121,7 +121,25 @@
   window.addEventListener('beforeunload', function () { if (!ui.pendingResume && S) saveLocal(); });
 
   // ------------------------------------------------------------------ stimulus window link
-  function stimMessage() { return { type: 'state', reference: S.reference, recon: S.work.recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId }; }
+  /** The candidate being previewed (shown large and optionally in the stimulus window), or null. */
+  function previewInfo() {
+    if (!ui.preview) return null;
+    var rec = S.proposals.filter(function (p) { return p.id === ui.preview.setId; })[0];
+    var idx = rec ? rec.candidates.map(function (c) { return c.id; }).indexOf(ui.preview.candId) : -1;
+    if (idx < 0) { ui.preview = null; return null; }
+    return { rec: rec, cand: rec.candidates[idx], letter: String.fromCharCode(65 + idx), choosable: C.canChoose(S, rec.id) };
+  }
+  function setPreview(setId, candId) {
+    var same = ui.preview && ui.preview.setId === setId && ui.preview.candId === candId;
+    ui.preview = (candId && !same) ? { setId: setId, candId: candId } : null;
+    if (ui.preview) C.log(S, 'preview-candidate', { set: setId, candidate: candId });
+    refresh(); broadcast(); scheduleSave();
+  }
+  function stimMessage() {
+    var pv = previewInfo();
+    var recon = pv && $('previewOnStim').checked ? pv.cand.recon : S.work.recon;
+    return { type: 'state', reference: S.reference, recon: recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId, previewing: !!(pv && $('previewOnStim').checked) };
+  }
   function broadcast() {
     if (!S) return;
     var m = stimMessage();
@@ -140,7 +158,15 @@
   function drawMain() {
     var c = $('reconCanvas'), n = Math.round(360 * DPR);
     if (c.width !== n) { c.width = c.height = n; }
-    D.drawSingle(c, S.work.recon, geom());
+    var pv = previewInfo();
+    D.drawSingle(c, pv ? pv.cand.recon : S.work.recon, geom());
+    $('previewBar').hidden = !pv;
+    $('reconTitle').textContent = pv ? 'Previewing ' + pv.letter + ' (not chosen)' : 'Current reconstruction';
+    if (pv) {
+      $('previewText').textContent = pv.choosable ? 'Previewing ' + pv.letter + '. Nothing has changed yet.' : 'Previewing ' + pv.letter + ' from an earlier set (Undo to choose it).';
+      $('previewChoose').textContent = 'Choose ' + pv.letter;
+      $('previewChoose').hidden = !pv.choosable;
+    }
     var r = $('refCanvas'), m = Math.round(160 * DPR);
     if (r.width !== m) { r.width = r.height = m; }
     D.drawSingle(r, C.referenceRecon(S.reference), geom());
@@ -155,7 +181,7 @@
     c.style.aspectRatio = disp.w + ' / ' + disp.h;
     var W = Math.round(cssW * DPR), H = Math.round(cssH * DPR);
     if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
-    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: S.work.recon, layout: S.layout },
+    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: stimMessage().recon, layout: S.layout },
       { scale: cssW / disp.w, labels: true, now: Date.now(), timing: { seqStart: ui.seqStart } });
     // Warnings are evaluated at full stimulus-window scale.
     var n = Math.max(8, Math.min(2048, Math.ceil(S.layout.diameter * S.layout.ppd * ((ui.display && ui.display.dpr) || 1))));
@@ -385,17 +411,38 @@
     if (rec.source === 'combination') info.push('combinations of ' + (rec.settings.families || []).join(' + '));
     if (rec.pinnedInFocus && rec.pinnedInFocus.length) info.push('pinned and left unchanged: ' + rec.pinnedInFocus.join(', '));
     if (rec.reason) info.push(rec.reason);
-    if (rec.choice) info.push(rec.choice === 'keep' ? 'You kept the current version.' : 'You chose ' + rec.choice.replace('p', '#') + '. Adjust further, or ask for more alternatives.');
-    if (stale && !rec.choice) info.push('These alternatives were made for an earlier version. Request new ones.');
+    var choosable = !stale;
+    if (rec.choice && rec.choice !== 'keep' && stale) info.push('You chose ' + String.fromCharCode(65 + Number(rec.choice.slice(1))) + '. Undo to come back to these and choose a different one, or ask for more alternatives.');
+    else if (rec.choice === 'keep') info.push('You kept the current version. You can still choose one of these.');
+    else if (stale) info.push('These alternatives were made for an earlier version. Request new ones.');
     $('altInfo').textContent = info.join(' · ');
-    if (rec.choice) return;
-    box.append(tile({ id: 'current', recon: S.work.recon, badge: '★', caption: 'Current', current: true, px: 150,
-      button: el('button', { text: 'Keep current', disabled: stale, onclick: function () { Lab.choose(rec.id, 'keep'); } }) }));
+    var big = !!S.settings.bigCandidates, px = big ? 300 : 150;
+    box.classList.toggle('big', big);
+    var pv = ui.preview && ui.preview.setId === rec.id ? ui.preview.candId : null;
+    var cur = tile({ id: 'current', recon: S.work.recon, badge: '★', caption: 'Current', current: !pv, px: px,
+      onclick: function () { setPreview(null, null); },
+      button: el('button', { text: 'Keep current', disabled: !choosable, onclick: function (e) { e.stopPropagation(); ui.preview = null; Lab.choose(rec.id, 'keep'); } }) });
+    box.append(cur);
     rec.candidates.forEach(function (c, i) {
-      box.append(tile({ id: c.id, recon: c.recon, badge: String.fromCharCode(65 + i), caption: c.label, px: 150,
+      var L = String.fromCharCode(65 + i), chosen = rec.choice === c.id && stale;
+      var t = tile({ id: c.id, recon: c.recon, badge: L + (chosen ? ' ✓' : ''), caption: c.label, px: px,
         sub: c.changes && c.changes.length ? c.changes.map(function (x) { return x.path + ' ' + fmt(x.from) + '→' + fmt(x.to); }).join('; ') : (c.rationale || ''),
-        button: el('button', { text: 'Choose ' + String.fromCharCode(65 + i), disabled: stale, onclick: function () { if (Lab.choose(rec.id, c.id)) toast('Updated. The sliders now show this version.'); } }) }));
+        onclick: function () { setPreview(rec.id, c.id); },
+        button: el('button', { text: chosen ? 'Chosen' : 'Choose ' + L, disabled: !choosable, onclick: function (e) {
+          e.stopPropagation(); ui.preview = null; if (Lab.choose(rec.id, c.id)) toast('Updated. The sliders now show this version. Undo returns to these alternatives.'); } }) });
+      if (pv === c.id) t.classList.add('previewing');
+      if (!choosable) t.classList.add('stale');
+      box.append(t);
     });
+  }
+  function cyclePreview(dir) {
+    var rec = ui.currentSet && S.proposals.filter(function (p) { return p.id === ui.currentSet; })[0];
+    if (!rec || !rec.candidates.length) return;
+    var ids = [null].concat(rec.candidates.map(function (c) { return c.id; }));
+    var cur = ui.preview && ui.preview.setId === rec.id ? ids.indexOf(ui.preview.candId) : 0;
+    var next = ids[(cur + dir + ids.length) % ids.length];
+    ui.preview = null;
+    setPreview(rec.id, next);
   }
 
   // ------------------------------------------------------------------ describe
@@ -629,6 +676,7 @@
 
   // ------------------------------------------------------------------ tabs, refresh
   function switchTab(t) {
+    if (t !== ui.tab && ui.preview) { ui.preview = null; broadcast(); }
     ui.tab = t;
     document.querySelectorAll('.tabs [data-tab]').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === t); b.setAttribute('aria-selected', String(b.dataset.tab === t)); });
     document.querySelectorAll('.tab').forEach(function (p) { p.hidden = p.id !== 'tab-' + t; });
@@ -644,6 +692,7 @@
     document.querySelectorAll('input[name=propScale]').forEach(function (r) { r.checked = r.value === S.settings.proposalScale; });
     $('showAdvanced').checked = S.settings.includeAdvanced;
     $('shrink').checked = S.settings.shrinkRepeated;
+    $('bigCands').checked = !!S.settings.bigCandidates;
     $('showLabels').checked = S.settings.showLabels;
     document.body.classList.toggle('nolabels', !S.settings.showLabels || $('participantMode').checked);
     drawMain();
@@ -688,6 +737,14 @@
   $('showAdvanced').addEventListener('change', function (e) { S.settings.includeAdvanced = e.target.checked; ui.structureKey = null; refresh(); scheduleSave(); });
   $('shrink').addEventListener('change', function (e) { S.settings.shrinkRepeated = e.target.checked; scheduleSave(); });
   $('showLabels').addEventListener('change', function (e) { S.settings.showLabels = e.target.checked; refresh(); scheduleSave(); });
+  $('bigCands').addEventListener('change', function (e) { S.settings.bigCandidates = e.target.checked; refresh(); scheduleSave(); });
+  $('previewOnStim').addEventListener('change', function () { broadcast(); });
+  $('previewBack').addEventListener('click', function () { setPreview(null, null); });
+  $('previewChoose').addEventListener('click', function () {
+    var pv = previewInfo(); if (!pv) return;
+    ui.preview = null;
+    if (Lab.choose(pv.rec.id, pv.cand.id)) toast('Chose ' + pv.letter + '. Undo returns to these alternatives.');
+  });
   $('showAlts').addEventListener('click', function () { Lab.requestAlternatives({ focus: $('altFocus').value }); });
   $('repeatAlts').addEventListener('click', function () { Lab.requestAlternatives({ focus: $('altFocus').value, repeat: true }); });
   $('markRegion').addEventListener('click', function () { ui.marking = !ui.marking; $('markRegion').classList.toggle('active', ui.marking); $('reconCanvas').parentElement.classList.toggle('marking', ui.marking); if (ui.marking) toast('Drag on the picture to mark the area.'); });
@@ -744,6 +801,11 @@
     var t = e.target;
     if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && (t.type === 'text' || !t.type))) return;
     var mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
+    if (ui.tab === 'alternatives' && !mod && t.tagName !== 'SELECT' && t.tagName !== 'INPUT') {
+      if (e.key === 'ArrowRight') { e.preventDefault(); cyclePreview(1); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); cyclePreview(-1); return; }
+      if (e.key === 'Escape' && ui.preview) { e.preventDefault(); setPreview(null, null); return; }
+    }
     if (mod && k === 'z' && !e.shiftKey) { e.preventDefault(); Lab.undo(); }
     else if ((mod && k === 'z' && e.shiftKey) || (mod && k === 'y')) { e.preventDefault(); Lab.redo(); }
   });

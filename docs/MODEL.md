@@ -139,8 +139,11 @@ Proposals are deterministic and seeded. They are not AI-generated images.
   Any manual edit or new starting point resets it.
 - **Recording**: every set records `seed`, all settings, the base state, all candidates and the choice (`keep`, a candidate id, or none).
   Regenerating with the recorded settings reproduces the set exactly (tested).
+- **Preview**: clicking a candidate shows it in the main view and, optionally, in the stimulus window without changing the
+  reconstruction. Each preview is logged (`preview-candidate`).
 - **Choice**: choosing replaces the reconstruction (one undo entry) and the sliders show the new values. "Keep current" changes nothing.
-  A set made for an earlier version cannot be applied.
+  A choice can be made whenever the reconstruction equals the set's base version: after *Keep current*, or after undoing a
+  choice. Every choice is recorded in `choices` (with `choice` = the latest). Otherwise the set cannot be applied.
 
 ## Pins and compositions
 

@@ -835,28 +835,36 @@
   /** Choose a candidate (or 'keep'). Keep current never changes the reconstruction. */
   function chooseCandidate(s, setId, candId) {
     var rec = findSet(s, setId);
-    if (rec.choice !== null) fail('A choice was already recorded for ' + setId);
+    var isBase = JSON.stringify(rec.base.recon) === JSON.stringify(s.work.recon);
+    if (!isBase)
+      throw cannotApply(rec.choice !== null && rec.choice !== 'keep'
+        ? 'You already chose from these alternatives. Undo back to the version they were made from to choose a different one, or request new alternatives.'
+        : 'The reconstruction changed after these alternatives were shown. Request new alternatives.');
+    if (!rec.choices) rec.choices = rec.choice !== null ? [{ choice: rec.choice, time: rec.choiceTime }] : [];
     if (candId === 'keep') {
-      rec.choice = 'keep'; rec.choiceTime = nowISO();
-      if (JSON.stringify(rec.base.recon) === JSON.stringify(s.work.recon))
-        s.neighborhood = { round: rec.settings && rec.settings.round || 0, anchor: JSON.stringify(s.work.recon) };
+      rec.choice = 'keep'; rec.choiceTime = nowISO(); rec.choices.push({ choice: 'keep', time: rec.choiceTime });
+      s.neighborhood = { round: rec.settings && rec.settings.round || 0, anchor: JSON.stringify(s.work.recon) };
       log(s, 'keep-current', { set: setId });
       return false;
     }
     var c = rec.candidates.filter(function (x) { return x.id === candId; })[0];
     if (!c) fail('Unknown candidate ' + candId);
-    if (JSON.stringify(rec.base.recon) !== JSON.stringify(s.work.recon))
-      throw cannotApply('The reconstruction changed after these alternatives were shown. Request new alternatives.');
     // Re-check pins at choice time (pins may have been added since display).
     var r = withPins(s.work, validateRecon(c.recon));
     var violated = s.work.pins.filter(function (p) { return JSON.stringify(getValue(c.recon, p)) !== JSON.stringify(getValue(s.work.recon, p)); });
     if (violated.length) throw cannotApply('This alternative would change pinned ' + violated.join(', ') + '. Request new alternatives.', violated);
     var anchorRound = rec.settings && rec.settings.round || 0;
+    var revised = rec.choices.length > 0;
     commit(s, { recon: r.recon, pins: s.work.pins.slice(), origin: { type: rec.source, set: setId, candidate: candId } },
-      { action: 'choose-candidate', label: 'Choose alternative ' + candId, detail: { set: setId, candidate: candId, changes: c.changes } });
-    rec.choice = candId; rec.choiceTime = nowISO();
+      { action: 'choose-candidate', label: 'Choose alternative ' + candId, detail: { set: setId, candidate: candId, changes: c.changes, revisedChoice: revised } });
+    rec.choice = candId; rec.choiceTime = nowISO(); rec.choices.push({ choice: candId, time: rec.choiceTime });
     s.neighborhood = { round: anchorRound, anchor: JSON.stringify(s.work.recon) };
     return true;
+  }
+  /** Can a choice be made from this set now (i.e. is the reconstruction still the set's base)? */
+  function canChoose(s, setId) {
+    var rec = findSet(s, setId);
+    return JSON.stringify(rec.base.recon) === JSON.stringify(s.work.recon);
   }
 
   // ---------------------------------------------------------------- descriptions, outcome, acceptance
@@ -1024,7 +1032,7 @@
     addComponent: addComponent, removeComponent: removeComponent, mixLegacy: mixLegacy,
     galleryItems: galleryItems, galleryItem: galleryItem, galleryFamily: galleryFamily, templateRecon: templateRecon, combinationRecons: combinationRecons,
     chooseGallery: chooseGallery, recordGalleryOutcome: recordGalleryOutcome,
-    generateProposals: generateProposals, requestAlternatives: requestAlternatives, recordCandidates: recordCandidates, combine: combine, chooseCandidate: chooseCandidate,
+    generateProposals: generateProposals, requestAlternatives: requestAlternatives, recordCandidates: recordCandidates, combine: combine, chooseCandidate: chooseCandidate, canChoose: canChoose,
     captureDescription: captureDescription, setOutcome: setOutcome, accept: accept, setReference: setReference, setLayout: setLayout, eyeRouting: eyeRouting,
     applyOperations: applyOperations, aiContext: aiContext, importSession: importSession, devRequest: devRequest
   };
