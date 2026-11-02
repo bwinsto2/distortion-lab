@@ -55,6 +55,42 @@
       send({ type: 'key', key: e.key, shift: e.shiftKey });
     }
   });
+  // ---- Mouse as a participant controller (participant controls on): wheel = knob, buttons = actions.
+  // The pointer is locked to this window on the first click so the wheel keeps reaching it; Esc releases it.
+  var wheelAcc = 0, holdTimer = null, held = false;
+  function action(a, steps) { send({ type: 'action', action: a, steps: steps || 1 }); }
+  function active() { return state && state.view; }
+  canvas.addEventListener('wheel', function (e) {
+    if (!active()) return;
+    e.preventDefault();
+    var px = e.deltaMode === 1 ? e.deltaY * 40 : (e.deltaMode === 2 ? e.deltaY * 800 : e.deltaY);
+    wheelAcc += px;
+    var notch = 100;
+    while (Math.abs(wheelAcc) >= notch * 0.5) {           // one step per wheel notch (trackpads accumulate)
+      var dir = wheelAcc > 0 ? -1 : 1;                     // scroll up/away = increase
+      wheelAcc -= -dir * notch;
+      if (Math.abs(wheelAcc) < notch * 0.5) wheelAcc = 0;
+      action('value', e.shiftKey ? 5 * dir : dir);
+    }
+  }, { passive: false });
+  canvas.addEventListener('mousedown', function (e) {
+    if (!active()) return;
+    e.preventDefault();
+    if (canvas.requestPointerLock && document.pointerLockElement !== canvas) { try { var p = canvas.requestPointerLock(); if (p && p.catch) p.catch(function () {}); } catch (err) { /* optional */ } }
+    if (e.button === 0) { held = false; clearTimeout(holdTimer); holdTimer = setTimeout(function () { held = true; action('alts'); }, 900); }
+    else if (e.button === 1) action('mode');
+    else if (e.button === 2) action('eye');
+    else if (e.button === 3) action('undo');
+    else if (e.button === 4) action('alts');
+  });
+  canvas.addEventListener('mouseup', function (e) {
+    if (!active() || e.button !== 0) return;
+    clearTimeout(holdTimer);
+    if (!held) action('press');
+    held = false;
+  });
+  canvas.addEventListener('contextmenu', function (e) { if (active()) e.preventDefault(); });
+  canvas.addEventListener('auxclick', function (e) { if (active()) e.preventDefault(); });
   document.addEventListener('fullscreenchange', function () { if (!document.fullscreenElement) document.body.classList.remove('present'); report(); request(); });
   document.addEventListener('mousemove', function () {
     document.body.classList.remove('hide-cursor'); clearTimeout(cursorTimer);

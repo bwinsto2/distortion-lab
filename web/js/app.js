@@ -158,6 +158,8 @@
     if (m.type === 'hello') broadcast();
     if (m.type === 'display' && typeof m.w === 'number') { ui.display = { w: m.w, h: m.h, dpr: m.dpr, fullscreen: !!m.fullscreen }; drawPreview(); }
     if (m.type === 'key' && typeof m.key === 'string') { var a = K.keyAction(m.key, !!m.shift); if (a) stereoAction(a.action, a.steps, 'keyboard'); }
+    if (m.type === 'action' && K.ACTIONS.some(function (x) { return x.id === m.action; }) && typeof m.steps === 'number' && Math.abs(m.steps) <= 20)
+      stereoAction(m.action, m.steps, 'mouse');
   }
   if (bc) bc.onmessage = function (e) { onStimMessage(e.data); };
   window.addEventListener('message', function (e) { if (e.source === ui.stimWin) onStimMessage(e.data); });

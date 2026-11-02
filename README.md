@@ -93,7 +93,7 @@ presentation. It draws exactly what the console sends and has no controls. Scree
 the stereoscope does.
 
 **Participant controls in the stereoscope** (Experimenter tab): participants switch between amblyopic-eye and
-fellow-eye views with a button. They adjust or compare with a USB MIDI controller (knobs and buttons) or the keyboard,
+fellow-eye views with a button. They adjust or compare with a USB MIDI controller (knobs and buttons), a mouse (scroll wheel and buttons) or the keyboard,
 using a small menu drawn in the fellow-eye half below the reconstruction. Lab setup with a Linux desktop, two monitors
 and the controller: [docs/SETUP.md](docs/SETUP.md).
 

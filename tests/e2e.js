@@ -310,6 +310,24 @@ function post(port, p, body) {
     assert(J((await work()).recon) === before, 'undo button');
     await stim.keyboard.press('Space');                       // keys typed in the stimulus window reach the console
     await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'AE');
+    // Mouse as controller in the stimulus window
+    await stim.mouse.move(700, 500);
+    await stim.mouse.click(700, 500, { button: 'right' });   // switch eye
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'FE');
+    await stim.mouse.click(700, 500, { button: 'middle' });  // compare -> adjust
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.overlay.title === 'ADJUST');
+    const ctlState = await page.evaluate(() => DistortionLab.stereoState());
+    const wBefore = J((await work()).recon);
+    await stim.mouse.wheel(0, -100);                          // one notch up = +1 step
+    await page.waitForFunction((b) => JSON.stringify(DistortionLab.getWork().recon) !== b, wBefore);
+    await stim.mouse.wheel(0, 100);                           // one notch down = -1 step
+    await page.waitForFunction((b) => JSON.stringify(DistortionLab.getWork().recon) === b, wBefore);
+    await stim.mouse.click(700, 500);                         // left click = next control
+    await page.waitForFunction((c) => DistortionLab.stereoState().ctl === c + 1, ctlState.ctl);
+    await stim.mouse.down(); await sleep(1100); await stim.mouse.up();   // hold = new alternatives
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.overlay.title === 'COMPARE');
+    await stim.mouse.click(700, 500, { button: 'right' });   // back to amblyopic eye for the MIDI part
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'AE');
     // Simulated MIDI controller: learn, then use
     await page.evaluate(() => DistortionLab.startControllerSetup());
     const midiSend = (bytes) => page.evaluate((b) => DistortionLab.midiMessage(b), bytes);

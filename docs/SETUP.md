@@ -66,6 +66,13 @@ Blank halves stay at the same mid-grey as the background, so switching doesn't c
 **Set up buttons and knobs…**, then follow the steps: turn or press each control once. The setup is remembered on that
 computer. For the X-Touch Mini, use its **MC mode** (the "MC" button), where the knobs send relative turns.
 
+**Mouse** (no extra hardware): in the stimulus window, scroll = knob (Shift+scroll = 5 clicks), left click = press,
+**hold** left button about 1 s = new alternatives, right click = switch eye, middle click (press the wheel) =
+Adjust/Compare, side "back" button = undo, side "forward" button = new alternatives. The first click locks the pointer
+to the stimulus window (it's hidden) so the wheel keeps working. **Esc** releases it. Note that the computer has one
+pointer: while it's locked, the researcher must press Esc before using the console with the mouse (a second mouse
+moves the same pointer). The MIDI controller doesn't have this limitation.
+
 **Keyboard** (works in the console outside text boxes, and in the stimulus window):
 ← → turn the knob (Shift = 5 clicks) · ↑ ↓ choose control · Enter = press knob · Space = switch eye ·
 M = Adjust/Compare · N = new alternatives · Z = undo.
