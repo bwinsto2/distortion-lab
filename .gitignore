@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 .venv/
+data/
+dist/
+*.tmp
+node_modules/
+test-output/
