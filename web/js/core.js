@@ -133,6 +133,7 @@
     q.sb = Math.sin(b); q.cb = Math.cos(b);
     q.soa = Math.sin(oa); q.coa = Math.cos(oa);
     q.sh = Math.sin(ha); q.ch = Math.cos(ha);
+    q.usesSides = ['bendSide', 'zigSide', 'fragSide', 'crossSide'].some(function (k) { return p[k] === 'upper' || p[k] === 'lower'; });
     q.br = [0, 1, 2].map(function (i) { var t = ha + i * 2 * Math.PI / 3; return [Math.cos(t), Math.sin(t)]; });
     return q;
   }
@@ -149,30 +150,38 @@
     }
     return best - q.holeSize;
   }
+  /** Weight of a feature limited to one side of the boundary line: 1 (whole), H (upper) or 1 - H (lower). */
+  function sideWeight(side, H) { return side === 'upper' ? H : (side === 'lower' ? 1 - H : 1); }
   function semanticSignal(x, y, q) {
     var u = -x * q.sa + y * q.ca;      // across-stripe coordinate (deg)
     var v = x * q.ca + y * q.sa;       // along-stripe coordinate (deg)
-    var d = 0;
-    if (q.bendAmount !== 0) d += q.bendAmount * Math.sin(TAU * v / q.bendSpacing + q.bendPhase * DEG);
+    var d = 0, H = 1;
+    if (q.offsetAmount !== 0 || q.usesSides) {
+      var w = v * q.coa + u * q.soa - q.offsetPosition;
+      H = q.offsetSoftness > 0 ? 0.5 * (1 + Math.tanh(w / q.offsetSoftness)) : (w >= 0 ? 1 : 0);
+    }
+    if (q.bendAmount !== 0) d += sideWeight(q.bendSide, H) * q.bendAmount * Math.sin(TAU * v / q.bendSpacing + q.bendPhase * DEG);
     if (q.zigAmount !== 0) {
       var t = v / q.zigSpacing + q.zigPhase / 360;
-      d += q.zigAmount * ((1 - q.zigShape) * triWave(t) + q.zigShape * stepWave(t));
+      d += sideWeight(q.zigSide, H) * q.zigAmount * ((1 - q.zigShape) * triWave(t) + q.zigShape * stepWave(t));
     }
-    if (q.offsetAmount !== 0) {
-      var w = v * q.coa + u * q.soa - q.offsetPosition;
-      var H = q.offsetSoftness > 0 ? 0.5 * (1 + Math.tanh(w / q.offsetSoftness)) : (w >= 0 ? 1 : 0);
-      d += q.offsetAmount * (H - 0.5);
-    }
+    if (q.offsetAmount !== 0) d += q.offsetAmount * (H - 0.5);
     var s = u + d;
     var P = profile(Math.cos(2 * Math.PI * q.frequency * s + q.phr), q.sharpness);
     if (q.fragExtent > 0) {
       var n = Math.floor(q.frequency * s + q.phase / 360);
       var tt = v / q.fragLength + q.fragJitter * hash01(n, q.fragSeed);
-      if (tt - Math.floor(tt) < q.fragExtent) P = q.gapFill;
+      if (tt - Math.floor(tt) < q.fragExtent) {
+        var wf = sideWeight(q.fragSide, H);
+        if (wf === 1) P = q.gapFill; else if (wf > 0) P = P + wf * (q.gapFill - P);
+      }
     }
     if (q.crossStrength > 0) {
-      var gc = Math.cos(TAU * (-x * q.sb + y * q.cb) / q.crossSpacing + q.crossPhase * DEG);
-      P = clamp(P + q.crossStrength * profile(gc, q.sharpness), -1, 1);
+      var wc = sideWeight(q.crossSide, H);
+      if (wc > 0) {
+        var gc = Math.cos(TAU * (-x * q.sb + y * q.cb) / q.crossSpacing + q.crossPhase * DEG);
+        P = clamp(P + wc * q.crossStrength * profile(gc, q.sharpness), -1, 1);
+      }
     }
     if (q.holeSize > 0) {
       var dist = holeDistance(x, y, q);
@@ -331,6 +340,7 @@
   function relevantFamilies(recon, revealed) {
     if (recon.renderer !== 'semantic-grating') return ['output'].concat(recon.params.components.map(function (c) { return 'c' + c.id; }));
     var set = ['global'].concat(activeFamilies(recon));
+    if (['bendSide', 'zigSide', 'fragSide', 'crossSide'].some(function (k) { return recon.params[k] === 'upper' || recon.params[k] === 'lower'; }) && set.indexOf('offset') < 0) set.push('offset');
     (revealed || []).forEach(function (f) { if (SEM.families[f] && set.indexOf(f) < 0) set.push(f); });
     return Object.keys(SEM.families).filter(function (f) { return set.indexOf(f) >= 0; });
   }
@@ -384,6 +394,11 @@
     noExtraKeys(r, ['renderer', 'rendererVersion', 'params'], 'reconstruction');
     plainObject(r.params, 'reconstruction.params');
     if (r.renderer === 'semantic-grating') {
+      if (r.rendererVersion === '1.0.0') {        // 1.0.0 -> 1.1.0: side-limited features added; 'whole' is pixel-identical
+        var up = {}; for (var k0 in r.params) up[k0] = r.params[k0];
+        ['bendSide', 'zigSide', 'fragSide', 'crossSide'].forEach(function (k) { if (up[k] === undefined) up[k] = 'whole'; });
+        r = { renderer: r.renderer, rendererVersion: SEM.version, params: up };
+      }
       if (r.rendererVersion !== SEM.version) fail('Unsupported semantic-grating version ' + r.rendererVersion);
       noExtraKeys(r.params, Object.keys(SEM_DEFS), 'semantic params');
       var p = {};
@@ -958,7 +973,9 @@
   function aiContext(s, description, focus) {
     return { softwareVersion: VERSION, renderer: s.work.recon.renderer, rendererVersion: s.work.recon.rendererVersion,
       reference: clone(s.reference), params: clone(s.work.recon.params), pins: s.work.pins.slice(), focus: focus || 'auto',
-      description: { text: description.text, region: description.region, properties: description.properties } };
+      description: { text: description.text, region: description.region, properties: description.properties },
+      geometry: { diameter: s.layout.diameter, sigma: s.layout.sigma, aperture: s.layout.aperture },
+      history: s.descriptions.filter(function (d) { return d.id !== description.id && d.text; }).slice(-5).map(function (d) { return d.text.slice(0, 500); }) };
   }
 
   // ---------------------------------------------------------------- legacy import

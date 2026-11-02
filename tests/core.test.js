@@ -381,3 +381,27 @@ test('session round-trips through JSON and validates', () => {
   const r = C.importSession(JSON.parse(J(s)));
   assert.equal(J(r), J(s));
 });
+
+test('features can be limited to one side of the boundary line (renderer 1.1.0)', () => {
+  const ref = C.defaultReference();
+  const z = semantic({ zigAmount: 0.06, zigSpacing: 1, zigSide: 'lower', offsetPosition: 0.3 }, ref);
+  const id = C.identityRecon(ref);
+  const zAll = semantic({ zigAmount: 0.06, zigSpacing: 1 }, ref);
+  // vertical stripes: v = y, boundary at y = 0.3; above unchanged, below zigzag
+  for (const [x, y] of [[0.11, 0.6], [-0.4, 1.0]]) assert.equal(sample(z, x, y), sample(id, x, y), 'upper side straight');
+  for (const [x, y] of [[0.11, -0.2], [-0.4, 0.1]]) assert.equal(sample(z, x, y), sample(zAll, x, y), 'lower side zigzag');
+  assert.ok(C.relevantFamilies(z, []).includes('offset'), 'boundary controls shown');
+  const cr = semantic({ crossStrength: 0.8, crossSide: 'upper', offsetPosition: 0 }, ref);
+  assert.equal(sample(cr, 0.13, -0.5), sample(id, 0.13, -0.5));
+  assert.notEqual(sample(cr, 0.13, 0.37), sample(id, 0.13, 0.37));
+});
+
+test('semantic-grating 1.0.0 reconstructions migrate to 1.1.0 with identical pixels', () => {
+  const r = C.util.clone(C.galleryItem(C.defaultReference(), 'combo:cross:mild+fragment:mild').recon);
+  const old = { renderer: 'semantic-grating', rendererVersion: '1.0.0', params: Object.assign({}, r.params) };
+  ['bendSide', 'zigSide', 'fragSide', 'crossSide'].forEach((k) => delete old.params[k]);
+  const m = C.validateRecon(old);
+  assert.equal(m.rendererVersion, '1.1.0');
+  assert.equal(m.params.zigSide, 'whole');
+  assert.deepEqual(render(old), render(m));
+});

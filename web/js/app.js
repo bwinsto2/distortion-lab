@@ -407,7 +407,12 @@
     var stale = JSON.stringify(rec.base.recon) !== JSON.stringify(S.work.recon);
     var info = [];
     if (rec.source === 'seeded') info.push('seed ' + rec.seed + ' · ' + rec.settings.scale + (rec.settings.round ? ' · repeat ' + rec.settings.round + ' (×' + Math.pow(rec.settings.shrinkFactor, rec.settings.round).toFixed(2) + ')' : '') + ' · focus ' + rec.settings.focus);
-    if (rec.source === 'ai') info.push((rec.isAI ? 'Suggested by AI (' + rec.provider + ' ' + rec.model + ')' : 'Test mock (not AI)') + ' · validated operations; nothing changes until you choose');
+    if (rec.source === 'ai') {
+      info.push((rec.isAI ? 'Suggested by AI (' + rec.provider + ' ' + rec.model + ')' : 'Test mock (not AI)') +
+        (rec.judged ? ' · picked after viewing ' + rec.considered + ' rendered candidates' : '') + ' · nothing changes until you choose');
+      if (rec.limitations) info.push('AI says it cannot fully do this: ' + rec.limitations);
+      if (rec.judgeNotes) info.push('AI notes: ' + rec.judgeNotes);
+    }
     if (rec.source === 'combination') info.push('combinations of ' + (rec.settings.families || []).join(' + '));
     if (rec.pinnedInFocus && rec.pinnedInFocus.length) info.push('pinned and left unchanged: ' + rec.pinnedInFocus.join(', '));
     if (rec.reason) info.push(rec.reason);
@@ -415,7 +420,7 @@
     if (rec.choice && rec.choice !== 'keep' && stale) info.push('You chose ' + String.fromCharCode(65 + Number(rec.choice.slice(1))) + '. Undo to come back to these and choose a different one, or ask for more alternatives.');
     else if (rec.choice === 'keep') info.push('You kept the current version. You can still choose one of these.');
     else if (stale) info.push('These alternatives were made for an earlier version. Request new ones.');
-    $('altInfo').textContent = info.join(' · ');
+    $('altInfo').textContent = info.join('\n');
     var big = !!S.settings.bigCandidates, px = big ? 300 : 150;
     box.classList.toggle('big', big);
     var pv = ui.preview && ui.preview.setId === rec.id ? ui.preview.candId : null;
@@ -426,7 +431,7 @@
     rec.candidates.forEach(function (c, i) {
       var L = String.fromCharCode(65 + i), chosen = rec.choice === c.id && stale;
       var t = tile({ id: c.id, recon: c.recon, badge: L + (chosen ? ' ✓' : ''), caption: c.label, px: px,
-        sub: c.changes && c.changes.length ? c.changes.map(function (x) { return x.path + ' ' + fmt(x.from) + '→' + fmt(x.to); }).join('; ') : (c.rationale || ''),
+        sub: (rec.source === 'ai' && c.rationale ? c.rationale + ' — ' : '') + (c.changes && c.changes.length ? c.changes.map(function (x) { return x.path + ' ' + fmt(x.from) + '→' + fmt(x.to); }).join('; ') : ''),
         onclick: function () { setPreview(rec.id, c.id); },
         button: el('button', { text: chosen ? 'Chosen' : 'Choose ' + L, disabled: !choosable, onclick: function (e) {
           e.stopPropagation(); ui.preview = null; if (Lab.choose(rec.id, c.id)) toast('Updated. The sliders now show this version. Undo returns to these alternatives.'); } }) });
@@ -497,21 +502,39 @@
     var rec = saveDescription(true) || ui.lastDesc;
     if (!rec) { toast('Please describe what looks different first.'); return; }
     var focus = focusForProps(rec.properties);
-    $('aiSuggest').disabled = true; $('aiSuggest').textContent = 'Asking…';
-    api('ai/propose', { method: 'POST', body: { work: S.work, context: C.aiContext(S, rec, focus), count: 4 } }).then(function (j) {
+    // Seeded alternatives are sent too; the AI looks at all candidates and picks the ones that fit best.
+    var poolSeed = (C.util.hashString(S.sessionId + ':ai:' + S.proposals.length)) >>> 0;
+    var pool = C.generateProposals(S.work, { count: 8, seed: poolSeed, focus: focus, scale: S.settings.proposalScale,
+      includeAdvanced: true, revealed: S.settings.revealedFamilies }).candidates;
+    $('aiSuggest').disabled = true; $('aiSuggest').textContent = 'Asking… (up to a minute)';
+    api('ai/propose', { method: 'POST', body: { work: S.work, context: C.aiContext(S, rec, focus), count: 4, pool: pool.map(function (c) { return c.recon; }) } }).then(function (j) {
       aiStatus = j.ai || aiStatus;
       var list = [];
       j.candidates.forEach(function (c) {
         if (!c.recon) return;
-        var local = C.applyOperations(S.work, c.operations);   // re-validate in the browser too
-        if (!local.applied.length || JSON.stringify(local.recon) !== JSON.stringify(c.recon)) return;
-        list.push({ id: 'p' + list.length, label: c.label, rationale: c.rationale, operations: c.operations,
-          changes: local.applied.map(function (a) { return { path: a.path, label: C.labelFor(S.work.recon, a.path), from: a.from, to: a.to }; }),
-          rejected: local.rejected, recon: local.recon });
+        var item;
+        if (c.source === 'pool') {
+          var pc = pool[c.poolIndex];
+          if (!pc) return;
+          item = { label: c.judgeReason ? 'Seeded: ' + pc.label : pc.label, changes: pc.changes, recon: pc.recon, source: 'pool' };
+        } else {
+          var local = C.applyOperations(S.work, c.operations);   // re-validate in the browser too
+          if (!local.applied.length || JSON.stringify(local.recon) !== JSON.stringify(C.validateRecon(c.recon))) return;
+          item = { label: c.label, operations: c.operations, rejected: local.rejected, recon: local.recon, source: 'ai',
+            changes: local.applied.map(function (a) { return { path: a.path, label: C.labelFor(S.work.recon, a.path), from: a.from, to: a.to }; }) };
+        }
+        item.id = 'p' + list.length;
+        item.rationale = c.judgeReason || c.rationale || '';
+        list.push(item);
       });
       var set = act(function () { return C.recordCandidates(S, 'ai', list, { provider: j.provider, model: j.model, isAI: !!(j.ai && j.ai.isAI), descriptionId: rec.id,
-        rejectedCount: j.candidates.length - list.length }); });
-      if (set) { ui.currentSet = set.id; switchTab('alternatives'); toast(list.length ? list.length + ' validated suggestion(s). Choose one or keep current.' : 'No valid suggestions were returned.'); }
+        limitations: j.limitations || '', judged: !!j.judged, judgeNotes: j.judgeNotes || '', considered: j.considered,
+        poolSeed: poolSeed, rejectedCount: (j.rejectedSets || []).length }); });
+      if (set) {
+        ui.currentSet = set.id; switchTab('alternatives');
+        toast(list.length ? list.length + ' suggestion(s), picked after looking at ' + j.considered + ' rendered candidates. Choose one or keep current.'
+          : 'None of the candidates matched. See the note above the pictures.', 6000);
+      }
     }).catch(function (e) { toast('AI request failed: ' + e.message + ' (description is saved)', 6000); if (e.body && e.body.ai) aiStatus = e.body.ai; })
       .then(function () { $('aiSuggest').textContent = 'Ask AI for suggestions'; updateAiUi(); });
   }

@@ -44,11 +44,24 @@ CLAUDE_BILLING_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BA
                       "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY")
 CLAUDE_FALLBACK_PATHS = ("~/.claude/local/claude", "~/.local/bin/claude", "/opt/homebrew/bin/claude", "/usr/local/bin/claude")
 
+JUDGE_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["ranking", "notes"],
+    "properties": {
+        "ranking": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["id", "reason"],
+            "properties": {"id": {"type": "string"}, "reason": {"type": "string"}}}},
+        "notes": {"type": "string"},
+    },
+}
+
 RESPONSE_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["candidates"],
+    "required": ["candidates", "limitations"],
     "properties": {
+        "limitations": {"type": "string"},
         "candidates": {
             "type": "array",
             "items": {
@@ -77,7 +90,8 @@ RESPONSE_SCHEMA = {
     },
 }
 
-ALLOWED_CONTEXT_KEYS = {"softwareVersion", "renderer", "rendererVersion", "reference", "params", "pins", "focus", "description"}
+ALLOWED_CONTEXT_KEYS = {"softwareVersion", "renderer", "rendererVersion", "reference", "params", "pins", "focus", "description",
+                        "geometry", "history"}
 
 
 def sanitize_context(ctx):
@@ -93,27 +107,87 @@ def sanitize_context(ctx):
     return {k: ctx[k] for k in ALLOWED_CONTEXT_KEYS if k in ctx}
 
 
-def build_messages(ctx, count):
+def visual_notes(ctx):
+    """Plain-language explanation of what the numbers mean visually, for the current settings."""
+    g = ctx.get("geometry") or {}
+    D = float(g.get("diameter", 3.2))
+    if ctx["renderer"] != "semantic-grating":
+        return ("Original rectified-grating synthesis: summed clipped gratings. Small weight/orientation changes can have large, "
+                "non-local effects. The circular window is %.2f deg across." % D)
+    p = ctx["params"]
+    f = float(p.get("frequency", 4))
+    per = 1.0 / f
+    lines = [
+        "Picture: a circular window %.2f deg across; coordinates in deg with (0,0) at the centre, x to the right, y UP "
+        "(so negative y is the lower half)." % D,
+        "Stripes run along the direction 'orientation' measured counter-clockwise from horizontal (90 = vertical stripes, "
+        "0 = horizontal). Stripe period = 1/frequency = %.3f deg, so about %.0f stripes cross the window." % (per, D * f),
+        "Sideways displacements (bendAmount, zigAmount, offsetAmount) are in deg across the stripes: %.3f deg = a quarter "
+        "stripe period (clearly visible); %.3f deg = half a period, which swaps black and white and looks like no change, so "
+        "keep displacements below about %.3f deg." % (per / 4, per / 2, per * 0.4),
+        "Spacing controls (bendSpacing, zigSpacing, fragLength) are wavelengths ALONG the stripes in deg: the window shows "
+        "about window/spacing waves (e.g. spacing %.2f deg -> about %.1f waves)." % (D / 3, 3.0),
+        "zigShape: 0 = pointed zigzag corners, 1 = square steps.",
+        "Boundary line (offset family): a straight line across the stripes, at distance offsetPosition (deg) from the centre "
+        "measured along the stripe direction (for near-vertical stripes: positive = above the centre), tilted by "
+        "offsetAngle. offsetAmount shifts the stripes on one side relative to the other. The boundary line exists even "
+        "when offsetAmount is 0.",
+        "bendSide / zigSide / fragSide / crossSide limit that feature to the 'upper' or 'lower' side of the boundary line "
+        "('whole' = everywhere). Use these whenever the description says a feature is only above/below/on one side of a "
+        "break or line.",
+        "Gap: holeX/holeY = centre (deg), holeSize = radius (disc) or half-width (band/branch) in deg; holeResidual = how "
+        "visible the stripes stay inside it (0 = none).",
+        "Crossing lines: crossAngle is relative to the stripes; crossSpacing is the period of the crossing pattern in deg.",
+    ]
+    return "\n".join("- " + l for l in lines)
+
+
+def build_messages(ctx, count, with_images=False):
     system = (
-        "You help a vision researcher match a participant's verbal description of a perceived grating distortion. "
-        "You may ONLY propose bounded parameter operations over the listed controls of the current renderer. "
-        "Never change pinned paths. Never invent paths. Values must lie within the listed min/max. "
-        "Use op 'set' for absolute values or 'delta' for changes. Use at most 4 operations per candidate. "
-        "Return %d distinct candidates, each a plausible small step toward the description. "
-        "Label each candidate neutrally (e.g. 'more bending, wider spacing'). Do not diagnose." % count)
+        "You help a vision researcher match a participant's verbal description of a perceived grating distortion by "
+        "proposing changes to the parameters of a deterministic image generator. You may ONLY propose bounded operations "
+        "over the listed controls of the current renderer: {path, op: 'set' (absolute) or 'delta' (relative), value}. "
+        "Never change pinned paths, never invent paths, keep values within min/max, and use at most 6 operations per candidate.\n"
+        "Read the description literally and carry out the specific change it asks for, including WHERE in the picture "
+        "(above/below a break, left/right, centre/edge). Keep everything the participant did not mention unchanged.\n"
+        "Return %d distinct candidates that differ meaningfully from each other: vary the size of the main change "
+        "(small / medium / large) and, where the description is ambiguous, try different interpretations. Changes must be "
+        "large enough to see (see the scale notes).\n"
+        "In 'limitations', say plainly if any part of the request cannot be produced with these controls (for example a "
+        "feature confined to an arbitrary region); otherwise write an empty string. Do not pretend a partial match is exact.\n"
+        "Label each candidate neutrally and concretely (e.g. 'zigzag only below the break, medium'). Do not diagnose." % count)
+    d = ctx.get("description") or {}
     user = {
-        "controls": param_summary(ctx["renderer"]),
+        "participant_description_verbatim": d.get("text", ""),
+        "properties_ticked": d.get("properties", []),
+        "marked_region_deg": d.get("region"),
+        "earlier_descriptions_this_session": ctx.get("history", []),
         "renderer": ctx["renderer"],
-        "current": ctx["params"],
+        "current_parameters": ctx["params"],
         "pinned_paths_do_not_change": ctx.get("pins", []),
         "focus": ctx.get("focus", "auto"),
         "reference_grating": ctx.get("reference"),
-        "participant_description_verbatim": (ctx.get("description") or {}).get("text", ""),
-        "marked_region_deg": (ctx.get("description") or {}).get("region"),
-        "properties_selected": (ctx.get("description") or {}).get("properties", []),
-        "coordinates": "nominal degrees, origin at aperture centre, y positive upward",
+        "controls": param_summary(ctx["renderer"]),
     }
-    return [{"role": "system", "content": system}, {"role": "user", "content": json.dumps(user)}]
+    text = ("How to read the numbers:\n" + visual_notes(ctx) + "\n\nTask (JSON):\n" + json.dumps(user))
+    if with_images:
+        text = ("Images attached: (1) REFERENCE = the undistorted grating the participant views with the other eye; "
+                "(2) CURRENT = the current reconstruction. The participant says how what they see differs from CURRENT.\n\n" + text)
+    return [{"role": "system", "content": system}, {"role": "user", "content": text}]
+
+
+def build_judge_text(ctx, ids, count):
+    d = ctx.get("description") or {}
+    return ("You are checking candidate pictures for a vision researcher. Images: REFERENCE (undistorted grating), CURRENT "
+            "(current reconstruction), then candidates labelled %s.\n"
+            "The participant described how what they see differs from CURRENT: \"%s\"%s\n"
+            "Look carefully at each candidate and rank the %d candidates that best show the change the participant asked for "
+            "(and change nothing else). Prefer a candidate that does exactly what was asked over one that does more. Exclude "
+            "candidates that look the same as CURRENT or change the wrong thing. For each ranked candidate give a one-sentence "
+            "reason describing what you see in it. In 'notes', say whether any candidate actually achieves the request, and what "
+            "is still missing if not. Use only the ids given." % (
+                ", ".join(ids), d.get("text", ""),
+                (" Marked area (deg, y up): %s." % json.dumps(d.get("region"))) if d.get("region") else "", count))
 
 
 class Bridge:
@@ -194,32 +268,25 @@ class Bridge:
             self.verified, self.last_error = False, "%s: %s" % (type(e).__name__, e)
         return self.status()
 
-    def propose(self, ctx, count=4):
+    @property
+    def sees_images(self):
+        return self.provider in ("claude-code", "mock")
+
+    def propose(self, ctx, count=4, images=None):
+        """Ask for `count` candidate operation sets. `images` = [(label, png_bytes)] when the provider can see images."""
         ctx = sanitize_context(ctx)
-        count = max(1, min(6, int(count)))
+        count = max(1, min(8, int(count)))
         if self.provider == "mock":
             return self._mock(ctx, count)
         if self.provider == "claude-code":
             if not self.claude_bin:
                 raise RuntimeError("AI bridge is not connected (claude command not found)")
-            msgs = build_messages(ctx, count)
-            prompt = msgs[0]["content"] + "\n\nTask context (JSON):\n" + msgs[1]["content"]
-            try:
-                out = self._claude(prompt, schema=RESPONSE_SCHEMA, timeout=180)
-            except RuntimeError as e:
-                self.verified, self.last_error = False, str(e)
-                raise
-            self.verified = True
-            res = out.get("structured_output")
-            if res is None:
-                try:
-                    res = json.loads(out.get("result") or "")
-                except ValueError:
-                    raise RuntimeError("Claude Code did not return structured output")
-            if not isinstance(res, dict) or not isinstance(res.get("candidates"), list):
+            msgs = build_messages(ctx, count, with_images=bool(images))
+            res, model = self._claude_structured(msgs[0]["content"] + "\n\n" + msgs[1]["content"], RESPONSE_SCHEMA, images or [], 240)
+            if not isinstance(res.get("candidates"), list):
                 raise RuntimeError("Claude Code returned an unexpected structure")
-            model = next(iter(out.get("modelUsage") or {}), self.claude_model or "default")
-            return {"provider": "claude-code", "model": model, "candidates": res["candidates"][:count]}
+            return {"provider": "claude-code", "model": model, "candidates": res["candidates"][:count],
+                    "limitations": str(res.get("limitations") or "")[:600]}
         if self.provider != "openai" or not self.key:
             raise RuntimeError("AI bridge is not connected")
         body = {"model": self.model, "messages": build_messages(ctx, count), "temperature": 0.4,
@@ -234,7 +301,37 @@ class Bridge:
         out = json.loads(text)
         if not isinstance(out, dict) or not isinstance(out.get("candidates"), list):
             raise RuntimeError("Provider returned an unexpected structure")
-        return {"provider": "openai", "model": self.model, "candidates": out["candidates"][:count]}
+        return {"provider": "openai", "model": self.model, "candidates": out["candidates"][:count],
+                "limitations": str(out.get("limitations") or "")[:600]}
+
+    def judge(self, ctx, images, ids, count=4):
+        """Look at rendered candidates and rank the best `count`. images = [(label, png)] incl. REFERENCE and CURRENT."""
+        ctx = sanitize_context(ctx)
+        if self.provider == "mock":
+            return {"ranking": [{"id": i, "reason": "mock ranking (input order)"} for i in ids[:count]], "notes": "mock judge (not AI)"}
+        if self.provider != "claude-code":
+            return None
+        res, _ = self._claude_structured(build_judge_text(ctx, ids, count), JUDGE_SCHEMA, images, 240)
+        rank = [r for r in res.get("ranking", []) if isinstance(r, dict) and r.get("id") in ids]
+        return {"ranking": rank, "notes": str(res.get("notes") or "")[:800]}
+
+    def _claude_structured(self, text, schema, images, timeout):
+        try:
+            out = self._claude(text, schema=schema, timeout=timeout, images=images)
+        except RuntimeError as e:
+            self.verified, self.last_error = False, str(e)
+            raise
+        self.verified = True
+        res = out.get("structured_output")
+        if res is None:
+            try:
+                res = json.loads(out.get("result") or "")
+            except ValueError:
+                raise RuntimeError("Claude Code did not return structured output")
+        if not isinstance(res, dict):
+            raise RuntimeError("Claude Code returned an unexpected structure")
+        model = next(iter(out.get("modelUsage") or {}), self.claude_model or "default")
+        return res, model
 
     @staticmethod
     def _find_claude():
@@ -247,28 +344,42 @@ class Bridge:
                 return p
         return None
 
-    def _claude(self, prompt, schema=None, timeout=180):
+    def _claude(self, prompt, schema=None, timeout=180, images=None):
         """Run Claude Code non-interactively: no tools, no MCP servers, no settings, no saved session,
-        in an empty temporary folder, with API-key variables removed so the subscription sign-in is used."""
-        args = [self.claude_bin, "-p", "--output-format", "json", "--tools", "", "--no-session-persistence",
-                "--strict-mcp-config", "--setting-sources", ""]
+        in an empty temporary folder, with API-key variables removed so the subscription sign-in is used.
+        The message (text plus optional labelled PNG images) is sent as one stream-json user message."""
+        import base64
+        args = [self.claude_bin, "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+                "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", ""]
         if schema is not None:
             args += ["--json-schema", json.dumps(schema)]
         if self.claude_model:
             args += ["--model", self.claude_model]
+        content = [{"type": "text", "text": prompt}]
+        for label, png in images or []:
+            content.append({"type": "text", "text": "Image %s:" % label})
+            content.append({"type": "image", "source": {"type": "base64", "media_type": "image/png",
+                                                        "data": base64.b64encode(png).decode("ascii")}})
+        message = json.dumps({"type": "user", "message": {"role": "user", "content": content}}) + "\n"
         env = {k: v for k, v in os.environ.items() if k not in CLAUDE_BILLING_ENV}
         tmp = tempfile.mkdtemp(prefix="dl-claude-")
         try:
-            proc = subprocess.run(args, input=prompt, capture_output=True, text=True, timeout=timeout, cwd=tmp, env=env)
+            proc = subprocess.run(args, input=message, capture_output=True, text=True, timeout=timeout, cwd=tmp, env=env)
         except subprocess.TimeoutExpired:
             raise RuntimeError("Claude Code did not answer within %d s" % timeout)
         except OSError as e:
             raise RuntimeError("Could not run Claude Code: %s" % e)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
-        try:
-            out = json.loads(proc.stdout)
-        except ValueError:
+        out = None
+        for line in proc.stdout.splitlines():
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(ev, dict) and ev.get("type") == "result":
+                out = ev
+        if out is None:
             msg = (proc.stderr or proc.stdout or "").strip().splitlines()
             raise RuntimeError("Claude Code error: %s" % (msg[-1][:300] if msg else "exit %d" % proc.returncode))
         if out.get("is_error"):
@@ -290,6 +401,6 @@ class Bridge:
                 ops.append([{"path": "holeSize", "op": "set", "value": 0.6}])
             ops.append([{"path": "orientation", "op": "delta", "value": 5}])
             ops.append([{"path": "bendAmount", "op": "set", "value": 9}])  # deliberately out of range: must be rejected
-        return {"provider": "mock", "model": "mock", "candidates": [
+        return {"provider": "mock", "model": "mock", "limitations": "", "candidates": [
             {"label": "mock candidate %d" % (i + 1), "rationale": "deterministic test rule", "operations": o}
             for i, o in enumerate(ops[:count])]}

@@ -37,7 +37,7 @@ from urllib.parse import urlparse
 
 from . import VERSION
 from .ai_bridge import Bridge, sanitize_context
-from .model import ROOT, ValidationError, apply_operations, render_png, validate_recon, validate_work
+from .model import ROOT, ValidationError, apply_operations, parse_path, reference_recon, render_png, validate_recon, validate_work
 from .storage import Storage
 
 WEB = os.path.join(ROOT, "web")
@@ -257,31 +257,7 @@ def make_handler(app):
                 body = self._json_body() or {}
                 if not isinstance(body, dict):
                     raise ValidationError("body must be an object")
-                work = validate_work(body.get("work"))
-                ctx = body.get("context")
-                if not isinstance(ctx, dict) or ctx.get("renderer") != work["recon"]["renderer"]:
-                    raise ValidationError("context renderer must match the work")
-                ctx = sanitize_context(dict(ctx, params=work["recon"]["params"], pins=work["pins"]))
-                try:
-                    raw = app.bridge.propose(ctx, body.get("count", 4))
-                except RuntimeError as e:
-                    return self._send(503, {"ok": False, "error": str(e), "ai": app.bridge.status()})
-                except Exception as e:
-                    return self._send(502, {"ok": False, "error": "AI provider error: %s" % e, "ai": app.bridge.status()})
-                cands = []
-                for i, c in enumerate(raw.get("candidates", [])):
-                    if not isinstance(c, dict):
-                        continue
-                    try:
-                        res = apply_operations(work, c.get("operations"))
-                    except ValidationError as e:
-                        res = {"recon": None, "applied": [], "rejected": [{"op": c.get("operations"), "reason": str(e)}]}
-                    cands.append({"label": str(c.get("label", "candidate %d" % (i + 1)))[:120],
-                                  "rationale": str(c.get("rationale", ""))[:500], "operations": c.get("operations"),
-                                  "applied": res["applied"], "rejected": res["rejected"],
-                                  "recon": res["recon"] if res["applied"] else None})
-                return self._send(200, {"ok": True, "provider": raw.get("provider"), "model": raw.get("model"),
-                                        "ai": app.bridge.status(), "candidates": cands})
+                return self._send(*ai_propose(app, body))
             if parts == ["dev-request"] and method == "POST":
                 return self._send(200, dict(ok=True, **st.save_dev_request(self._json_body())))
             if parts == ["control"] and method == "POST":
@@ -316,6 +292,100 @@ def make_handler(app):
                 app.hub.unsubscribe(q)
 
     return Handler
+
+
+def ai_propose(app, body):
+    """Two-step AI suggestion.
+
+    1. The provider proposes candidate operation sets (seeing REFERENCE and CURRENT images when it can).
+       Every operation is validated against ranges and pins.
+    2. All valid candidates, plus seeded alternatives the browser sent as `pool`, are rendered and the provider
+       looks at them and ranks the ones that best show the described change (providers that can see images only).
+    Returns (status, payload)."""
+    work = validate_work(body.get("work"))
+    ctx = body.get("context")
+    if not isinstance(ctx, dict) or ctx.get("renderer") != work["recon"]["renderer"]:
+        raise ValidationError("context renderer must match the work")
+    ctx = sanitize_context(dict(ctx, params=work["recon"]["params"], pins=work["pins"]))
+    g = ctx.get("geometry") or {}
+    geom = {"diameter": g.get("diameter", 3.2), "sigma": g.get("sigma", 0.53), "aperture": g.get("aperture", "circle")}
+    if geom["aperture"] not in ("circle", "gaussian") or not all(
+            isinstance(geom[k], (int, float)) and not isinstance(geom[k], bool) and 0.05 <= geom[k] <= 10 for k in ("diameter", "sigma")):
+        raise ValidationError("invalid geometry")
+    count = body.get("count", 4)
+    if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= 6:
+        raise ValidationError("count must be 1-6")
+    pool = body.get("pool") or []
+    if not isinstance(pool, list) or len(pool) > 12:
+        raise ValidationError("pool must be a list of at most 12 reconstructions")
+    pool = [validate_recon(r) for r in pool]
+    def value(recon, path):
+        obj, key, _ = parse_path(recon, path)
+        return obj[key]
+    for r in pool:
+        for path in work["pins"]:
+            if value(r, path) != value(work["recon"], path):
+                raise ValidationError("pool candidate changes pinned %s" % path)
+    br = app.bridge
+    big, small = 256, 192
+    images = None
+    if br.sees_images:
+        images = [("REFERENCE", render_png(reference_recon(ctx["reference"]), big, geom)),
+                  ("CURRENT", render_png(work["recon"], big, geom))] if ctx.get("reference") else [("CURRENT", render_png(work["recon"], big, geom))]
+    try:
+        raw = br.propose(ctx, 6 if br.sees_images else count, images=images)
+    except RuntimeError as e:
+        return 503, {"ok": False, "error": str(e), "ai": br.status()}
+    except ValidationError:
+        raise
+    except Exception as e:
+        return 502, {"ok": False, "error": "AI provider error: %s" % e, "ai": br.status()}
+    proposed, rejected_sets = [], []
+    for i, c in enumerate(raw.get("candidates", [])):
+        if not isinstance(c, dict):
+            continue
+        try:
+            res = apply_operations(work, c.get("operations"))
+        except ValidationError as e:
+            res = {"recon": None, "applied": [], "rejected": [{"op": c.get("operations"), "reason": str(e)}]}
+        item = {"source": "ai", "label": str(c.get("label", "candidate %d" % (i + 1)))[:120],
+                "rationale": str(c.get("rationale", ""))[:500], "operations": c.get("operations"),
+                "applied": res["applied"], "rejected": res["rejected"], "recon": res["recon"] if res["applied"] else None}
+        (proposed if item["recon"] else rejected_sets).append(item)
+    for k, r in enumerate(pool):
+        proposed.append({"source": "pool", "poolIndex": k, "label": "seeded alternative", "rationale": "", "recon": r,
+                         "applied": [], "rejected": []})
+    # drop exact duplicates and candidates identical to the current reconstruction
+    seen, uniq = {json.dumps(work["recon"], sort_keys=True)}, []
+    for c in proposed:
+        key = json.dumps(c["recon"], sort_keys=True)
+        if key not in seen:
+            seen.add(key)
+            uniq.append(c)
+    judged, notes = False, ""
+    chosen = [c for c in uniq if c["source"] == "ai"][:count] or uniq[:count]
+    if br.sees_images and len(uniq) > 1:
+        ids = ["C%d" % (i + 1) for i in range(len(uniq))]
+        imgs = list(images or []) + [(ids[i], render_png(c["recon"], small, geom)) for i, c in enumerate(uniq)]
+        try:
+            verdict = br.judge(ctx, imgs, ids, count)
+        except RuntimeError as e:
+            verdict, notes = None, "Ranking step failed (%s); showing the AI's own proposals." % e
+        if verdict and verdict["ranking"]:
+            judged, notes = True, verdict["notes"]
+            chosen = []
+            for r in verdict["ranking"]:
+                c = uniq[ids.index(r["id"])]
+                if c not in chosen:
+                    c = dict(c, judgeReason=str(r.get("reason", ""))[:300])
+                    chosen.append(c)
+                if len(chosen) >= count:
+                    break
+        elif verdict and not verdict["ranking"]:
+            judged, notes, chosen = True, verdict["notes"] or "None of the candidates matched the description.", []
+    return 200, {"ok": True, "provider": raw.get("provider"), "model": raw.get("model"), "ai": br.status(),
+                 "limitations": raw.get("limitations", ""), "judged": judged, "judgeNotes": notes,
+                 "candidates": chosen, "rejectedSets": rejected_sets, "considered": len(uniq)}
 
 
 def make_server(host="127.0.0.1", port=8765, data_dir=None, env=None):

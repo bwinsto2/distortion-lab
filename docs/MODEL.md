@@ -42,7 +42,7 @@ uniquely identified perceptual or neural measurements.
 **Mixing** (`Adjust → Mix original forms`) concatenates the components of two forms, with weights scaled by `wa` and `wb`.
 The result is limited to 12 components. Pins are respected, and the mix is refused when it is impossible.
 
-## 2 · `semantic-grating` 1.0.0 (explicit appearance generator)
+## 2 · `semantic-grating` 1.1.0 (explicit appearance generator)
 
 This renderer is **not part of the published model**. It exists so that participant-facing, higher-order controls
 change the advertised property directly. It uses one carrier grating with documented geometric operations.
@@ -65,6 +65,14 @@ zigzag:  d_z = A_z · [(1 − s) · tri(t) + s · step(t)],   t = v / λ_z + φ_
 offset:  d_o = A_o · (H(w) − ½),   w = v cos α + u sin α − b
          H = unit step (w ≥ 0), or ½(1 + tanh(w / softness)) when softness > 0
 ```
+
+**Limiting a feature to one side of the boundary line** (added in 1.1.0): the offset boundary `w = 0` defines a line
+across the stripes, whether or not `offsetAmount` is 0. Bending, zigzag/steps, breaks and crossing lines each have an
+"applies to" setting (`bendSide`, `zigSide`, `fragSide`, `crossSide`): `whole`, `upper` or `lower`. The feature is
+multiplied by `1`, `H(w)` or `1 − H(w)` respectively, so with zero boundary softness it stops exactly at the line.
+"Upper" is the side the stripe direction points to: above the line for any non-horizontal stripes, and to the right for
+exactly horizontal stripes. Sessions made with 1.0.0 are migrated automatically by adding `whole` to each, which is
+pixel-identical (tested).
 
 **Carrier and profile**
 
@@ -114,6 +122,7 @@ The order of operations is: displacements → carrier/profile → breaks → cro
 | Bend amount / spacing | `A_b` (peak sideways displacement, deg) / `λ_b` (wavelength along the stripe, deg) |
 | Zigzag/step strength / spacing / corner style | `A_z` / `λ_z` / `s` (0 = zigzag, 1 = steps) |
 | Offset amount / boundary position | total sideways jump `A_o` across the boundary / boundary position `b` along the stripes |
+| … applies to (bend, zigzag, breaks, crossing) | whole picture, or only the upper/lower side of the boundary line |
 | Break extent / spacing | fraction of each stripe removed / repeat length `L` |
 | Gap size / position / stripe visibility inside gap / shape | `r` / `(x₀, y₀)` / `residual` / disc, band or branch |
 | Crossing strength / angle / spacing | `κ` / `Δ` / `λ_c` |

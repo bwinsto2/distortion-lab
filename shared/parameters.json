@@ -2,118 +2,994 @@
   "schema": "distortion-lab/parameters/1",
   "notes": "Canonical parameter schema shared by the browser core (web/js/data.js is generated from this file by tools/build_data.py) and the Python backend. Ranges are user-interface bounds, not physiological bounds. Spatial quantities are nominal visual degrees; angles and phases are degrees; y is positive upward.",
   "reference": [
-    {"key": "orientation", "label": "Orientation", "type": "number", "min": 0, "max": 180, "step": 0.1, "coarseStep": 1, "unit": "°", "default": 90},
-    {"key": "frequency", "label": "Spatial frequency", "type": "number", "min": 0.1, "max": 24, "step": 0.01, "coarseStep": 0.1, "unit": "c/°", "default": 4},
-    {"key": "phase", "label": "Phase", "type": "number", "min": 0, "max": 360, "step": 1, "coarseStep": 10, "unit": "°", "default": 0},
-    {"key": "contrast", "label": "Contrast", "type": "number", "min": 0, "max": 1, "step": 0.01, "coarseStep": 0.05, "unit": "", "default": 1}
+    {
+      "key": "orientation",
+      "label": "Orientation",
+      "type": "number",
+      "min": 0,
+      "max": 180,
+      "step": 0.1,
+      "coarseStep": 1,
+      "unit": "°",
+      "default": 90
+    },
+    {
+      "key": "frequency",
+      "label": "Spatial frequency",
+      "type": "number",
+      "min": 0.1,
+      "max": 24,
+      "step": 0.01,
+      "coarseStep": 0.1,
+      "unit": "c/°",
+      "default": 4
+    },
+    {
+      "key": "phase",
+      "label": "Phase",
+      "type": "number",
+      "min": 0,
+      "max": 360,
+      "step": 1,
+      "coarseStep": 10,
+      "unit": "°",
+      "default": 0
+    },
+    {
+      "key": "contrast",
+      "label": "Contrast",
+      "type": "number",
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "coarseStep": 0.05,
+      "unit": "",
+      "default": 1
+    }
   ],
   "layout": {
     "choices": {
-      "referenceSide": ["left", "right"],
-      "leftEye": ["AE", "FE", "unassigned"],
-      "rightEye": ["AE", "FE", "unassigned"],
-      "aperture": ["circle", "gaussian"],
-      "visibility": ["both", "left", "right", "blank"],
-      "comparison": ["simultaneous", "sequential", "toggle"],
-      "comparisonSide": ["left", "right"],
-      "toggleShowing": ["reference", "reconstruction"]
+      "referenceSide": [
+        "left",
+        "right"
+      ],
+      "leftEye": [
+        "AE",
+        "FE",
+        "unassigned"
+      ],
+      "rightEye": [
+        "AE",
+        "FE",
+        "unassigned"
+      ],
+      "aperture": [
+        "circle",
+        "gaussian"
+      ],
+      "visibility": [
+        "both",
+        "left",
+        "right",
+        "blank"
+      ],
+      "comparison": [
+        "simultaneous",
+        "sequential",
+        "toggle"
+      ],
+      "comparisonSide": [
+        "left",
+        "right"
+      ],
+      "toggleShowing": [
+        "reference",
+        "reconstruction"
+      ]
     },
     "numbers": {
-      "diameter": {"min": 0.5, "max": 10, "default": 3.2, "unit": "° (nominal)"},
-      "sigma": {"min": 0.05, "max": 5, "default": 0.53, "unit": "° (nominal)"},
-      "ppd": {"min": 10, "max": 300, "default": 80, "unit": "px/° (nominal, CSS px)"},
-      "separation": {"min": 10, "max": 80, "default": 50, "unit": "% of display width between centres"},
-      "vertical": {"min": -200, "max": 200, "default": 0, "unit": "CSS px offset of right panel"},
-      "sequenceMs": {"min": 100, "max": 10000, "default": 1000, "unit": "ms per alternation"}
+      "diameter": {
+        "min": 0.5,
+        "max": 10,
+        "default": 3.2,
+        "unit": "° (nominal)"
+      },
+      "sigma": {
+        "min": 0.05,
+        "max": 5,
+        "default": 0.53,
+        "unit": "° (nominal)"
+      },
+      "ppd": {
+        "min": 10,
+        "max": 300,
+        "default": 80,
+        "unit": "px/° (nominal, CSS px)"
+      },
+      "separation": {
+        "min": 10,
+        "max": 80,
+        "default": 50,
+        "unit": "% of display width between centres"
+      },
+      "vertical": {
+        "min": -200,
+        "max": 200,
+        "default": 0,
+        "unit": "CSS px offset of right panel"
+      },
+      "sequenceMs": {
+        "min": 100,
+        "max": 10000,
+        "default": 1000,
+        "unit": "ms per alternation"
+      }
     },
-    "booleans": {"linked": false, "fixation": false},
-    "defaults": {"referenceSide": "left", "leftEye": "unassigned", "rightEye": "unassigned", "aperture": "circle", "visibility": "both", "comparison": "simultaneous", "comparisonSide": "left", "toggleShowing": "reference"}
+    "booleans": {
+      "linked": false,
+      "fixation": false
+    },
+    "defaults": {
+      "referenceSide": "left",
+      "leftEye": "unassigned",
+      "rightEye": "unassigned",
+      "aperture": "circle",
+      "visibility": "both",
+      "comparison": "simultaneous",
+      "comparisonSide": "left",
+      "toggleShowing": "reference"
+    }
   },
   "renderers": {
     "semantic-grating": {
-      "version": "1.0.0",
+      "version": "1.1.0",
       "label": "Semantic appearance generator",
       "description": "Explicit deterministic appearance generator: one carrier grating with documented coordinate displacements (bend, zigzag/step, offset), interruption, crossing pattern and gap mask. Not part of the Olianezhad et al. synthesis model.",
       "families": {
-        "global": {"label": "Overall stripes", "plain": "Overall tilt, spacing, position and contrast", "activator": null},
-        "bend": {"label": "Bending", "plain": "Stripes bend or wave", "activator": "bendAmount"},
-        "zigzag": {"label": "Zigzag / steps", "plain": "Stripes have corners, zigzags or steps", "activator": "zigAmount"},
-        "offset": {"label": "Offset", "plain": "Part of the stripes is shifted at a boundary", "activator": "offsetAmount"},
-        "fragment": {"label": "Breaks", "plain": "Stripes are broken into pieces", "activator": "fragExtent"},
-        "hole": {"label": "Gap / missing area", "plain": "Part of the pattern is missing or faint", "activator": "holeSize"},
-        "cross": {"label": "Crossing lines", "plain": "Extra lines cross the stripes", "activator": "crossStrength"}
+        "global": {
+          "label": "Overall stripes",
+          "plain": "Overall tilt, spacing, position and contrast",
+          "activator": null
+        },
+        "bend": {
+          "label": "Bending",
+          "plain": "Stripes bend or wave",
+          "activator": "bendAmount"
+        },
+        "zigzag": {
+          "label": "Zigzag / steps",
+          "plain": "Stripes have corners, zigzags or steps",
+          "activator": "zigAmount"
+        },
+        "offset": {
+          "label": "Offset / boundary line",
+          "plain": "A boundary line across the stripes: stripes can shift there, and other features can be limited to one side of it",
+          "activator": "offsetAmount"
+        },
+        "fragment": {
+          "label": "Breaks",
+          "plain": "Stripes are broken into pieces",
+          "activator": "fragExtent"
+        },
+        "hole": {
+          "label": "Gap / missing area",
+          "plain": "Part of the pattern is missing or faint",
+          "activator": "holeSize"
+        },
+        "cross": {
+          "label": "Crossing lines",
+          "plain": "Extra lines cross the stripes",
+          "activator": "crossStrength"
+        }
       },
       "params": [
-        {"key": "orientation", "family": "global", "label": "Stripe orientation", "type": "number", "min": 0, "max": 180, "step": 0.1, "coarseStep": 1, "proposal": 4, "periodic": 180, "unit": "°", "default": 90},
-        {"key": "frequency", "family": "global", "label": "Stripe frequency", "type": "number", "min": 0.1, "max": 24, "step": 0.01, "coarseStep": 0.1, "proposal": 0.4, "unit": "c/°", "default": 4},
-        {"key": "phase", "family": "global", "label": "Stripe position (phase)", "type": "number", "min": 0, "max": 360, "step": 1, "coarseStep": 10, "proposal": 30, "periodic": 360, "unit": "°", "default": 0},
-        {"key": "contrast", "family": "global", "label": "Contrast", "type": "number", "min": 0, "max": 1, "step": 0.01, "coarseStep": 0.05, "proposal": 0.12, "unit": "", "default": 1},
-        {"key": "sharpness", "family": "global", "label": "Edge sharpness", "type": "number", "min": 0, "max": 1, "step": 0.01, "coarseStep": 0.1, "proposal": 0.15, "unit": "", "default": 0, "advanced": true},
-
-        {"key": "bendAmount", "family": "bend", "label": "Bend amount", "type": "number", "min": 0, "max": 0.5, "step": 0.005, "coarseStep": 0.025, "proposal": 0.04, "unit": "°", "default": 0},
-        {"key": "bendSpacing", "family": "bend", "label": "Bend spacing", "type": "number", "min": 0.2, "max": 5, "step": 0.01, "coarseStep": 0.1, "proposal": 0.3, "unit": "°", "default": 1.2},
-        {"key": "bendPhase", "family": "bend", "label": "Bend position", "type": "number", "min": 0, "max": 360, "step": 1, "coarseStep": 15, "proposal": 45, "periodic": 360, "unit": "°", "default": 0, "advanced": true},
-
-        {"key": "zigAmount", "family": "zigzag", "label": "Zigzag / step strength", "type": "number", "min": 0, "max": 0.5, "step": 0.005, "coarseStep": 0.025, "proposal": 0.04, "unit": "°", "default": 0},
-        {"key": "zigSpacing", "family": "zigzag", "label": "Zigzag / step spacing", "type": "number", "min": 0.2, "max": 5, "step": 0.01, "coarseStep": 0.1, "proposal": 0.3, "unit": "°", "default": 1},
-        {"key": "zigShape", "family": "zigzag", "label": "Corner style (0 zigzag · 1 steps)", "type": "number", "min": 0, "max": 1, "step": 0.01, "coarseStep": 0.1, "proposal": 0.25, "unit": "", "default": 0},
-        {"key": "zigPhase", "family": "zigzag", "label": "Zigzag position", "type": "number", "min": 0, "max": 360, "step": 1, "coarseStep": 15, "proposal": 45, "periodic": 360, "unit": "°", "default": 0, "advanced": true},
-
-        {"key": "offsetAmount", "family": "offset", "label": "Offset amount", "type": "number", "min": -0.5, "max": 0.5, "step": 0.005, "coarseStep": 0.025, "proposal": 0.04, "unit": "°", "default": 0},
-        {"key": "offsetPosition", "family": "offset", "label": "Boundary position", "type": "number", "min": -2, "max": 2, "step": 0.01, "coarseStep": 0.1, "proposal": 0.25, "unit": "°", "default": 0},
-        {"key": "offsetAngle", "family": "offset", "label": "Boundary tilt", "type": "number", "min": -60, "max": 60, "step": 0.5, "coarseStep": 5, "proposal": 10, "unit": "°", "default": 0, "advanced": true},
-        {"key": "offsetSoftness", "family": "offset", "label": "Boundary softness", "type": "number", "min": 0, "max": 0.3, "step": 0.005, "coarseStep": 0.02, "proposal": 0.03, "unit": "°", "default": 0, "advanced": true},
-
-        {"key": "fragExtent", "family": "fragment", "label": "Break extent", "type": "number", "min": 0, "max": 0.9, "step": 0.01, "coarseStep": 0.05, "proposal": 0.1, "unit": "fraction", "default": 0},
-        {"key": "fragLength", "family": "fragment", "label": "Break spacing", "type": "number", "min": 0.1, "max": 3, "step": 0.01, "coarseStep": 0.05, "proposal": 0.15, "unit": "°", "default": 0.6},
-        {"key": "fragJitter", "family": "fragment", "label": "Break irregularity", "type": "number", "min": 0, "max": 1, "step": 0.01, "coarseStep": 0.1, "proposal": 0.2, "unit": "", "default": 0.5, "advanced": true},
-        {"key": "fragSeed", "family": "fragment", "label": "Break pattern seed", "type": "number", "min": 0, "max": 999, "step": 1, "coarseStep": 1, "proposal": 7, "unit": "", "default": 1, "integer": true, "advanced": true},
-
-        {"key": "holeSize", "family": "hole", "label": "Gap size", "type": "number", "min": 0, "max": 2, "step": 0.01, "coarseStep": 0.05, "proposal": 0.12, "unit": "°", "default": 0},
-        {"key": "holeShape", "family": "hole", "label": "Gap shape", "type": "enum", "choices": ["disc", "band", "branch"], "choiceLabels": {"disc": "Round", "band": "Band", "branch": "Three-branch"}, "default": "disc"},
-        {"key": "holeX", "family": "hole", "label": "Gap position (horizontal)", "type": "number", "min": -2, "max": 2, "step": 0.01, "coarseStep": 0.1, "proposal": 0.2, "unit": "°", "default": 0},
-        {"key": "holeY", "family": "hole", "label": "Gap position (vertical)", "type": "number", "min": -2, "max": 2, "step": 0.01, "coarseStep": 0.1, "proposal": 0.2, "unit": "°", "default": 0},
-        {"key": "holeResidual", "family": "hole", "label": "Stripe visibility inside gap", "type": "number", "min": 0, "max": 1, "step": 0.01, "coarseStep": 0.05, "proposal": 0.15, "unit": "", "default": 0},
-        {"key": "holeAngle", "family": "hole", "label": "Gap orientation (band / branch)", "type": "number", "min": 0, "max": 360, "step": 0.5, "coarseStep": 5, "proposal": 15, "periodic": 360, "unit": "°", "default": 90, "advanced": true},
-        {"key": "holeSoftness", "family": "hole", "label": "Gap edge softness", "type": "number", "min": 0, "max": 0.5, "step": 0.005, "coarseStep": 0.025, "proposal": 0.05, "unit": "°", "default": 0.1, "advanced": true},
-        {"key": "gapFill", "family": "hole", "label": "Gap / break brightness", "type": "number", "min": -1, "max": 1, "step": 0.01, "coarseStep": 0.1, "proposal": 0.25, "unit": "", "default": 1, "advanced": true},
-
-        {"key": "crossStrength", "family": "cross", "label": "Crossing strength", "type": "number", "min": 0, "max": 1, "step": 0.01, "coarseStep": 0.05, "proposal": 0.12, "unit": "", "default": 0},
-        {"key": "crossAngle", "family": "cross", "label": "Crossing angle", "type": "number", "min": 0, "max": 180, "step": 0.5, "coarseStep": 5, "proposal": 12, "periodic": 180, "unit": "° from stripes", "default": 45},
-        {"key": "crossSpacing", "family": "cross", "label": "Crossing spacing", "type": "number", "min": 0.05, "max": 5, "step": 0.005, "coarseStep": 0.05, "proposal": 0.08, "unit": "° per cycle", "default": 0.5},
-        {"key": "crossPhase", "family": "cross", "label": "Crossing position", "type": "number", "min": 0, "max": 360, "step": 1, "coarseStep": 15, "proposal": 45, "periodic": 360, "unit": "°", "default": 0, "advanced": true}
-      ]
+        {
+          "key": "orientation",
+          "family": "global",
+          "label": "Stripe orientation",
+          "type": "number",
+          "min": 0,
+          "max": 180,
+          "step": 0.1,
+          "coarseStep": 1,
+          "proposal": 4,
+          "periodic": 180,
+          "unit": "°",
+          "default": 90
+        },
+        {
+          "key": "frequency",
+          "family": "global",
+          "label": "Stripe frequency",
+          "type": "number",
+          "min": 0.1,
+          "max": 24,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.4,
+          "unit": "c/°",
+          "default": 4
+        },
+        {
+          "key": "phase",
+          "family": "global",
+          "label": "Stripe position (phase)",
+          "type": "number",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "coarseStep": 10,
+          "proposal": 30,
+          "periodic": 360,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "contrast",
+          "family": "global",
+          "label": "Contrast",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "coarseStep": 0.05,
+          "proposal": 0.12,
+          "unit": "",
+          "default": 1
+        },
+        {
+          "key": "sharpness",
+          "family": "global",
+          "label": "Edge sharpness",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.15,
+          "unit": "",
+          "default": 0,
+          "advanced": true
+        },
+        {
+          "key": "bendAmount",
+          "family": "bend",
+          "label": "Bend amount",
+          "type": "number",
+          "min": 0,
+          "max": 0.5,
+          "step": 0.005,
+          "coarseStep": 0.025,
+          "proposal": 0.04,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "bendSpacing",
+          "family": "bend",
+          "label": "Bend spacing",
+          "type": "number",
+          "min": 0.2,
+          "max": 5,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.3,
+          "unit": "°",
+          "default": 1.2
+        },
+        {
+          "key": "bendSide",
+          "family": "bend",
+          "label": "Bending applies to",
+          "type": "enum",
+          "choices": [
+            "whole",
+            "upper",
+            "lower"
+          ],
+          "choiceLabels": {
+            "whole": "Whole picture",
+            "upper": "Upper side of boundary",
+            "lower": "Lower side of boundary"
+          },
+          "default": "whole",
+          "side": true
+        },
+        {
+          "key": "bendPhase",
+          "family": "bend",
+          "label": "Bend position",
+          "type": "number",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "coarseStep": 15,
+          "proposal": 45,
+          "periodic": 360,
+          "unit": "°",
+          "default": 0,
+          "advanced": true
+        },
+        {
+          "key": "zigAmount",
+          "family": "zigzag",
+          "label": "Zigzag / step strength",
+          "type": "number",
+          "min": 0,
+          "max": 0.5,
+          "step": 0.005,
+          "coarseStep": 0.025,
+          "proposal": 0.04,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "zigSpacing",
+          "family": "zigzag",
+          "label": "Zigzag / step spacing",
+          "type": "number",
+          "min": 0.2,
+          "max": 5,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.3,
+          "unit": "°",
+          "default": 1
+        },
+        {
+          "key": "zigShape",
+          "family": "zigzag",
+          "label": "Corner style (0 zigzag · 1 steps)",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.25,
+          "unit": "",
+          "default": 0
+        },
+        {
+          "key": "zigSide",
+          "family": "zigzag",
+          "label": "Zigzag / steps apply to",
+          "type": "enum",
+          "choices": [
+            "whole",
+            "upper",
+            "lower"
+          ],
+          "choiceLabels": {
+            "whole": "Whole picture",
+            "upper": "Upper side of boundary",
+            "lower": "Lower side of boundary"
+          },
+          "default": "whole",
+          "side": true
+        },
+        {
+          "key": "zigPhase",
+          "family": "zigzag",
+          "label": "Zigzag position",
+          "type": "number",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "coarseStep": 15,
+          "proposal": 45,
+          "periodic": 360,
+          "unit": "°",
+          "default": 0,
+          "advanced": true
+        },
+        {
+          "key": "offsetAmount",
+          "family": "offset",
+          "label": "Offset amount",
+          "type": "number",
+          "min": -0.5,
+          "max": 0.5,
+          "step": 0.005,
+          "coarseStep": 0.025,
+          "proposal": 0.04,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "offsetPosition",
+          "family": "offset",
+          "label": "Boundary position",
+          "type": "number",
+          "min": -2,
+          "max": 2,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.25,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "offsetAngle",
+          "family": "offset",
+          "label": "Boundary tilt",
+          "type": "number",
+          "min": -60,
+          "max": 60,
+          "step": 0.5,
+          "coarseStep": 5,
+          "proposal": 10,
+          "unit": "°",
+          "default": 0,
+          "advanced": true
+        },
+        {
+          "key": "offsetSoftness",
+          "family": "offset",
+          "label": "Boundary softness",
+          "type": "number",
+          "min": 0,
+          "max": 0.3,
+          "step": 0.005,
+          "coarseStep": 0.02,
+          "proposal": 0.03,
+          "unit": "°",
+          "default": 0,
+          "advanced": true
+        },
+        {
+          "key": "fragExtent",
+          "family": "fragment",
+          "label": "Break extent",
+          "type": "number",
+          "min": 0,
+          "max": 0.9,
+          "step": 0.01,
+          "coarseStep": 0.05,
+          "proposal": 0.1,
+          "unit": "fraction",
+          "default": 0
+        },
+        {
+          "key": "fragLength",
+          "family": "fragment",
+          "label": "Break spacing",
+          "type": "number",
+          "min": 0.1,
+          "max": 3,
+          "step": 0.01,
+          "coarseStep": 0.05,
+          "proposal": 0.15,
+          "unit": "°",
+          "default": 0.6
+        },
+        {
+          "key": "fragSide",
+          "family": "fragment",
+          "label": "Breaks apply to",
+          "type": "enum",
+          "choices": [
+            "whole",
+            "upper",
+            "lower"
+          ],
+          "choiceLabels": {
+            "whole": "Whole picture",
+            "upper": "Upper side of boundary",
+            "lower": "Lower side of boundary"
+          },
+          "default": "whole",
+          "side": true
+        },
+        {
+          "key": "fragJitter",
+          "family": "fragment",
+          "label": "Break irregularity",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.2,
+          "unit": "",
+          "default": 0.5,
+          "advanced": true
+        },
+        {
+          "key": "fragSeed",
+          "family": "fragment",
+          "label": "Break pattern seed",
+          "type": "number",
+          "min": 0,
+          "max": 999,
+          "step": 1,
+          "coarseStep": 1,
+          "proposal": 7,
+          "unit": "",
+          "default": 1,
+          "integer": true,
+          "advanced": true
+        },
+        {
+          "key": "holeSize",
+          "family": "hole",
+          "label": "Gap size",
+          "type": "number",
+          "min": 0,
+          "max": 2,
+          "step": 0.01,
+          "coarseStep": 0.05,
+          "proposal": 0.12,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "holeShape",
+          "family": "hole",
+          "label": "Gap shape",
+          "type": "enum",
+          "choices": [
+            "disc",
+            "band",
+            "branch"
+          ],
+          "choiceLabels": {
+            "disc": "Round",
+            "band": "Band",
+            "branch": "Three-branch"
+          },
+          "default": "disc"
+        },
+        {
+          "key": "holeX",
+          "family": "hole",
+          "label": "Gap position (horizontal)",
+          "type": "number",
+          "min": -2,
+          "max": 2,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.2,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "holeY",
+          "family": "hole",
+          "label": "Gap position (vertical)",
+          "type": "number",
+          "min": -2,
+          "max": 2,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.2,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "holeResidual",
+          "family": "hole",
+          "label": "Stripe visibility inside gap",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "coarseStep": 0.05,
+          "proposal": 0.15,
+          "unit": "",
+          "default": 0
+        },
+        {
+          "key": "holeAngle",
+          "family": "hole",
+          "label": "Gap orientation (band / branch)",
+          "type": "number",
+          "min": 0,
+          "max": 360,
+          "step": 0.5,
+          "coarseStep": 5,
+          "proposal": 15,
+          "periodic": 360,
+          "unit": "°",
+          "default": 90,
+          "advanced": true
+        },
+        {
+          "key": "holeSoftness",
+          "family": "hole",
+          "label": "Gap edge softness",
+          "type": "number",
+          "min": 0,
+          "max": 0.5,
+          "step": 0.005,
+          "coarseStep": 0.025,
+          "proposal": 0.05,
+          "unit": "°",
+          "default": 0.1,
+          "advanced": true
+        },
+        {
+          "key": "gapFill",
+          "family": "hole",
+          "label": "Gap / break brightness",
+          "type": "number",
+          "min": -1,
+          "max": 1,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.25,
+          "unit": "",
+          "default": 1,
+          "advanced": true
+        },
+        {
+          "key": "crossStrength",
+          "family": "cross",
+          "label": "Crossing strength",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "step": 0.01,
+          "coarseStep": 0.05,
+          "proposal": 0.12,
+          "unit": "",
+          "default": 0
+        },
+        {
+          "key": "crossAngle",
+          "family": "cross",
+          "label": "Crossing angle",
+          "type": "number",
+          "min": 0,
+          "max": 180,
+          "step": 0.5,
+          "coarseStep": 5,
+          "proposal": 12,
+          "periodic": 180,
+          "unit": "° from stripes",
+          "default": 45
+        },
+        {
+          "key": "crossSpacing",
+          "family": "cross",
+          "label": "Crossing spacing",
+          "type": "number",
+          "min": 0.05,
+          "max": 5,
+          "step": 0.005,
+          "coarseStep": 0.05,
+          "proposal": 0.08,
+          "unit": "° per cycle",
+          "default": 0.5
+        },
+        {
+          "key": "crossSide",
+          "family": "cross",
+          "label": "Crossing lines apply to",
+          "type": "enum",
+          "choices": [
+            "whole",
+            "upper",
+            "lower"
+          ],
+          "choiceLabels": {
+            "whole": "Whole picture",
+            "upper": "Upper side of boundary",
+            "lower": "Lower side of boundary"
+          },
+          "default": "whole",
+          "side": true
+        },
+        {
+          "key": "crossPhase",
+          "family": "cross",
+          "label": "Crossing position",
+          "type": "number",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "coarseStep": 15,
+          "proposal": 45,
+          "periodic": 360,
+          "unit": "°",
+          "default": 0,
+          "advanced": true
+        }
+      ],
+      "migrations": {
+        "1.0.0": "Add bendSide/zigSide/fragSide/crossSide = 'whole' (pixel-identical)."
+      }
     },
     "legacy-rectified": {
       "version": "1.0.0",
       "label": "Original rectified-grating synthesis (advanced)",
       "description": "Backward-compatible implementation of the original prototype: summed rectified gratings, Olianezhad et al. 2025 Eqs. 1-2 image-synthesis family with explicit final clip ±1 and direct (unnormalized) weights.",
       "maxComponents": 12,
-      "contrast": {"key": "contrast", "label": "Output contrast", "type": "number", "min": 0, "max": 1, "step": 0.01, "coarseStep": 0.05, "proposal": 0.1, "unit": "", "default": 1},
+      "contrast": {
+        "key": "contrast",
+        "label": "Output contrast",
+        "type": "number",
+        "min": 0,
+        "max": 1,
+        "step": 0.01,
+        "coarseStep": 0.05,
+        "proposal": 0.1,
+        "unit": "",
+        "default": 1
+      },
       "componentParams": [
-        {"key": "orientation", "label": "Orientation θ", "type": "number", "min": 0, "max": 180, "step": 0.1, "coarseStep": 1, "proposal": 3, "periodic": 180, "unit": "°", "default": 0},
-        {"key": "frequency", "label": "Spatial frequency f", "type": "number", "min": 0.1, "max": 24, "step": 0.01, "coarseStep": 0.1, "proposal": 0.2, "unit": "c/°", "default": 3},
-        {"key": "phase", "label": "Phase φ", "type": "number", "min": 0, "max": 360, "step": 1, "coarseStep": 10, "proposal": 20, "periodic": 360, "unit": "°", "default": 0},
-        {"key": "duty", "label": "Light/dark balance K", "type": "number", "min": -1, "max": 1, "step": 0.01, "coarseStep": 0.05, "proposal": 0.1, "unit": "", "default": 0},
-        {"key": "threshold", "label": "Component clipping T", "type": "number", "min": 0, "max": 2, "step": 0.01, "coarseStep": 0.05, "proposal": 0.1, "unit": "", "default": 1},
-        {"key": "weight", "label": "Component weight W", "type": "number", "min": 0, "max": 20, "step": 0.01, "coarseStep": 0.1, "proposal": 0.5, "proposalRel": 0.15, "unit": "", "default": 1}
+        {
+          "key": "orientation",
+          "label": "Orientation θ",
+          "type": "number",
+          "min": 0,
+          "max": 180,
+          "step": 0.1,
+          "coarseStep": 1,
+          "proposal": 3,
+          "periodic": 180,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "frequency",
+          "label": "Spatial frequency f",
+          "type": "number",
+          "min": 0.1,
+          "max": 24,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.2,
+          "unit": "c/°",
+          "default": 3
+        },
+        {
+          "key": "phase",
+          "label": "Phase φ",
+          "type": "number",
+          "min": 0,
+          "max": 360,
+          "step": 1,
+          "coarseStep": 10,
+          "proposal": 20,
+          "periodic": 360,
+          "unit": "°",
+          "default": 0
+        },
+        {
+          "key": "duty",
+          "label": "Light/dark balance K",
+          "type": "number",
+          "min": -1,
+          "max": 1,
+          "step": 0.01,
+          "coarseStep": 0.05,
+          "proposal": 0.1,
+          "unit": "",
+          "default": 0
+        },
+        {
+          "key": "threshold",
+          "label": "Component clipping T",
+          "type": "number",
+          "min": 0,
+          "max": 2,
+          "step": 0.01,
+          "coarseStep": 0.05,
+          "proposal": 0.1,
+          "unit": "",
+          "default": 1
+        },
+        {
+          "key": "weight",
+          "label": "Component weight W",
+          "type": "number",
+          "min": 0,
+          "max": 20,
+          "step": 0.01,
+          "coarseStep": 0.1,
+          "proposal": 0.5,
+          "proposalRel": 0.15,
+          "unit": "",
+          "default": 1
+        }
       ]
     }
   },
   "gallery": {
     "notes": "Gallery templates are overrides of the semantic generator relative to the current reference grating (orientation, frequency, phase, contrast are copied from the reference). They are deterministic illustrative appearances, not validated percept categories.",
     "families": [
-      {"id": "misorientation", "label": "Tilted", "params": ["orientation"], "mild": {"orientationOffset": 10}, "strong": {"orientationOffset": 25}},
-      {"id": "bend", "label": "Wavy / bent", "params": ["bendAmount", "bendSpacing"], "mild": {"bendAmount": 0.06, "bendSpacing": 1.4}, "strong": {"bendAmount": 0.15, "bendSpacing": 1.0}},
-      {"id": "zigzag", "label": "Zigzag", "params": ["zigAmount", "zigSpacing", "zigShape"], "mild": {"zigAmount": 0.06, "zigSpacing": 1.1, "zigShape": 0}, "strong": {"zigAmount": 0.11, "zigSpacing": 0.9, "zigShape": 0}},
-      {"id": "stepped", "label": "Stepped", "params": ["zigAmount", "zigSpacing", "zigShape"], "mild": {"zigAmount": 0.03, "zigSpacing": 1.0, "zigShape": 1}, "strong": {"zigAmount": 0.05, "zigSpacing": 0.8, "zigShape": 1}},
-      {"id": "offset", "label": "Offset at a boundary", "params": ["offsetAmount", "offsetPosition"], "mild": {"offsetAmount": 0.04, "offsetPosition": 0}, "strong": {"offsetAmount": 0.08, "offsetPosition": 0.3}},
-      {"id": "fragment", "label": "Broken stripes", "params": ["fragExtent", "fragLength"], "mild": {"fragExtent": 0.3, "fragLength": 0.7}, "strong": {"fragExtent": 0.55, "fragLength": 0.5}},
-      {"id": "cross", "label": "Crossing lines", "params": ["crossStrength", "crossAngle", "crossSpacing"], "mild": {"crossStrength": 0.45, "crossAngle": 45, "crossSpacing": 0.5}, "strong": {"crossStrength": 0.85, "crossAngle": 90, "crossSpacing": 0.35}},
-      {"id": "hole", "label": "Round gap", "params": ["holeSize", "holeShape", "holeX", "holeY"], "mild": {"holeSize": 0.45, "holeShape": "disc"}, "strong": {"holeSize": 0.85, "holeShape": "disc"}},
-      {"id": "band", "label": "Missing band", "params": ["holeSize", "holeShape", "holeAngle"], "mild": {"holeSize": 0.25, "holeShape": "band", "holeAngle": 0}, "strong": {"holeSize": 0.45, "holeShape": "band", "holeAngle": 0}},
-      {"id": "branch", "label": "Branching gap", "params": ["holeSize", "holeShape", "holeAngle"], "mild": {"holeSize": 0.15, "holeShape": "branch", "holeAngle": 90}, "strong": {"holeSize": 0.25, "holeShape": "branch", "holeAngle": 90}}
+      {
+        "id": "misorientation",
+        "label": "Tilted",
+        "params": [
+          "orientation"
+        ],
+        "mild": {
+          "orientationOffset": 10
+        },
+        "strong": {
+          "orientationOffset": 25
+        }
+      },
+      {
+        "id": "bend",
+        "label": "Wavy / bent",
+        "params": [
+          "bendAmount",
+          "bendSpacing"
+        ],
+        "mild": {
+          "bendAmount": 0.06,
+          "bendSpacing": 1.4
+        },
+        "strong": {
+          "bendAmount": 0.15,
+          "bendSpacing": 1.0
+        }
+      },
+      {
+        "id": "zigzag",
+        "label": "Zigzag",
+        "params": [
+          "zigAmount",
+          "zigSpacing",
+          "zigShape"
+        ],
+        "mild": {
+          "zigAmount": 0.06,
+          "zigSpacing": 1.1,
+          "zigShape": 0
+        },
+        "strong": {
+          "zigAmount": 0.11,
+          "zigSpacing": 0.9,
+          "zigShape": 0
+        }
+      },
+      {
+        "id": "stepped",
+        "label": "Stepped",
+        "params": [
+          "zigAmount",
+          "zigSpacing",
+          "zigShape"
+        ],
+        "mild": {
+          "zigAmount": 0.03,
+          "zigSpacing": 1.0,
+          "zigShape": 1
+        },
+        "strong": {
+          "zigAmount": 0.05,
+          "zigSpacing": 0.8,
+          "zigShape": 1
+        }
+      },
+      {
+        "id": "offset",
+        "label": "Offset at a boundary",
+        "params": [
+          "offsetAmount",
+          "offsetPosition"
+        ],
+        "mild": {
+          "offsetAmount": 0.04,
+          "offsetPosition": 0
+        },
+        "strong": {
+          "offsetAmount": 0.08,
+          "offsetPosition": 0.3
+        }
+      },
+      {
+        "id": "fragment",
+        "label": "Broken stripes",
+        "params": [
+          "fragExtent",
+          "fragLength"
+        ],
+        "mild": {
+          "fragExtent": 0.3,
+          "fragLength": 0.7
+        },
+        "strong": {
+          "fragExtent": 0.55,
+          "fragLength": 0.5
+        }
+      },
+      {
+        "id": "cross",
+        "label": "Crossing lines",
+        "params": [
+          "crossStrength",
+          "crossAngle",
+          "crossSpacing"
+        ],
+        "mild": {
+          "crossStrength": 0.45,
+          "crossAngle": 45,
+          "crossSpacing": 0.5
+        },
+        "strong": {
+          "crossStrength": 0.85,
+          "crossAngle": 90,
+          "crossSpacing": 0.35
+        }
+      },
+      {
+        "id": "hole",
+        "label": "Round gap",
+        "params": [
+          "holeSize",
+          "holeShape",
+          "holeX",
+          "holeY"
+        ],
+        "mild": {
+          "holeSize": 0.45,
+          "holeShape": "disc"
+        },
+        "strong": {
+          "holeSize": 0.85,
+          "holeShape": "disc"
+        }
+      },
+      {
+        "id": "band",
+        "label": "Missing band",
+        "params": [
+          "holeSize",
+          "holeShape",
+          "holeAngle"
+        ],
+        "mild": {
+          "holeSize": 0.25,
+          "holeShape": "band",
+          "holeAngle": 0
+        },
+        "strong": {
+          "holeSize": 0.45,
+          "holeShape": "band",
+          "holeAngle": 0
+        }
+      },
+      {
+        "id": "branch",
+        "label": "Branching gap",
+        "params": [
+          "holeSize",
+          "holeShape",
+          "holeAngle"
+        ],
+        "mild": {
+          "holeSize": 0.15,
+          "holeShape": "branch",
+          "holeAngle": 90
+        },
+        "strong": {
+          "holeSize": 0.25,
+          "holeShape": "branch",
+          "holeAngle": 90
+        }
+      }
     ],
-    "combinations": [["bend", "hole"], ["cross", "fragment"], ["stepped", "offset"], ["misorientation", "bend"]]
+    "combinations": [
+      [
+        "bend",
+        "hole"
+      ],
+      [
+        "cross",
+        "fragment"
+      ],
+      [
+        "stepped",
+        "offset"
+      ],
+      [
+        "misorientation",
+        "bend"
+      ]
+    ]
   }
 }

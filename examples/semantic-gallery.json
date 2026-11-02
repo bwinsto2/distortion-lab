@@ -15,7 +15,7 @@
    "label": "Unchanged reference",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -24,10 +24,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -35,6 +37,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -48,6 +51,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -58,7 +62,7 @@
    "label": "Tilted (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 100,
      "frequency": 4,
@@ -67,10 +71,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -78,6 +84,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -91,6 +98,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -101,7 +109,7 @@
    "label": "Tilted (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 115,
      "frequency": 4,
@@ -110,10 +118,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -121,6 +131,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -134,6 +145,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -144,7 +156,7 @@
    "label": "Wavy / bent (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -153,10 +165,12 @@
      "sharpness": 0,
      "bendAmount": 0.06,
      "bendSpacing": 1.4,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -164,6 +178,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -177,6 +192,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -187,7 +203,7 @@
    "label": "Wavy / bent (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -196,10 +212,12 @@
      "sharpness": 0,
      "bendAmount": 0.15,
      "bendSpacing": 1,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -207,6 +225,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -220,6 +239,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -230,7 +250,7 @@
    "label": "Zigzag (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -239,10 +259,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0.06,
      "zigSpacing": 1.1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -250,6 +272,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -263,6 +286,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -273,7 +297,7 @@
    "label": "Zigzag (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -282,10 +306,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0.11,
      "zigSpacing": 0.9,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -293,6 +319,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -306,6 +333,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -316,7 +344,7 @@
    "label": "Stepped (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -325,10 +353,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0.03,
      "zigSpacing": 1,
      "zigShape": 1,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -336,6 +366,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -349,6 +380,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -359,7 +391,7 @@
    "label": "Stepped (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -368,10 +400,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0.05,
      "zigSpacing": 0.8,
      "zigShape": 1,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -379,6 +413,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -392,6 +427,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -402,7 +438,7 @@
    "label": "Offset at a boundary (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -411,10 +447,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0.04,
      "offsetPosition": 0,
@@ -422,6 +460,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -435,6 +474,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -445,7 +485,7 @@
    "label": "Offset at a boundary (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -454,10 +494,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0.08,
      "offsetPosition": 0.3,
@@ -465,6 +507,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -478,6 +521,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -488,7 +532,7 @@
    "label": "Broken stripes (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -497,10 +541,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -508,6 +554,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0.3,
      "fragLength": 0.7,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -521,6 +568,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -531,7 +579,7 @@
    "label": "Broken stripes (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -540,10 +588,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -551,6 +601,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0.55,
      "fragLength": 0.5,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -564,6 +615,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -574,7 +626,7 @@
    "label": "Crossing lines (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -583,10 +635,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -594,6 +648,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -607,6 +662,7 @@
      "crossStrength": 0.45,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -617,7 +673,7 @@
    "label": "Crossing lines (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -626,10 +682,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -637,6 +695,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -650,6 +709,7 @@
      "crossStrength": 0.85,
      "crossAngle": 90,
      "crossSpacing": 0.35,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -660,7 +720,7 @@
    "label": "Round gap (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -669,10 +729,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -680,6 +742,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0.45,
@@ -693,6 +756,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -703,7 +767,7 @@
    "label": "Round gap (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -712,10 +776,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -723,6 +789,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0.85,
@@ -736,6 +803,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -746,7 +814,7 @@
    "label": "Missing band (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -755,10 +823,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -766,6 +836,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0.25,
@@ -779,6 +850,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -789,7 +861,7 @@
    "label": "Missing band (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -798,10 +870,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -809,6 +883,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0.45,
@@ -822,6 +897,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -832,7 +908,7 @@
    "label": "Branching gap (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -841,10 +917,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -852,6 +930,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0.15,
@@ -865,6 +944,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -875,7 +955,7 @@
    "label": "Branching gap (strong)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -884,10 +964,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -895,6 +977,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0.25,
@@ -908,6 +991,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -918,7 +1002,7 @@
    "label": "Wavy / bent (mild) + Round gap (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -927,10 +1011,12 @@
      "sharpness": 0,
      "bendAmount": 0.06,
      "bendSpacing": 1.4,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -938,6 +1024,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0.45,
@@ -951,6 +1038,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -961,7 +1049,7 @@
    "label": "Crossing lines (mild) + Broken stripes (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -970,10 +1058,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -981,6 +1071,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0.3,
      "fragLength": 0.7,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -994,6 +1085,7 @@
      "crossStrength": 0.45,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -1004,7 +1096,7 @@
    "label": "Stepped (mild) + Offset at a boundary (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 90,
      "frequency": 4,
@@ -1013,10 +1105,12 @@
      "sharpness": 0,
      "bendAmount": 0,
      "bendSpacing": 1.2,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0.03,
      "zigSpacing": 1,
      "zigShape": 1,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0.04,
      "offsetPosition": 0,
@@ -1024,6 +1118,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -1037,6 +1132,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }
@@ -1047,7 +1143,7 @@
    "label": "Tilted (mild) + Wavy / bent (mild)",
    "recon": {
     "renderer": "semantic-grating",
-    "rendererVersion": "1.0.0",
+    "rendererVersion": "1.1.0",
     "params": {
      "orientation": 100,
      "frequency": 4,
@@ -1056,10 +1152,12 @@
      "sharpness": 0,
      "bendAmount": 0.06,
      "bendSpacing": 1.4,
+     "bendSide": "whole",
      "bendPhase": 0,
      "zigAmount": 0,
      "zigSpacing": 1,
      "zigShape": 0,
+     "zigSide": "whole",
      "zigPhase": 0,
      "offsetAmount": 0,
      "offsetPosition": 0,
@@ -1067,6 +1165,7 @@
      "offsetSoftness": 0,
      "fragExtent": 0,
      "fragLength": 0.6,
+     "fragSide": "whole",
      "fragJitter": 0.5,
      "fragSeed": 1,
      "holeSize": 0,
@@ -1080,6 +1179,7 @@
      "crossStrength": 0,
      "crossAngle": 45,
      "crossSpacing": 0.5,
+     "crossSide": "whole",
      "crossPhase": 0
     }
    }

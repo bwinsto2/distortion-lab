@@ -5,21 +5,29 @@ description capture all work offline. The AI bridge is **off by default**.
 
 ## What it does
 
-When the participant has described a remaining difference, the experimenter can press **Ask AI for suggestions**.
+When the participant has described a remaining difference, the experimenter presses **Ask AI for suggestions**.
 
 1. The description is saved first, verbatim, whether or not the AI call succeeds.
-2. The browser sends `/api/ai/propose` the current reconstruction, pins, focus and **only** this task context:
-   renderer, parameters, pins, reference grating, description text, marked region and selected properties.
-   Participant label, condition, notes and session history are never sent. The backend refuses any context containing
-   other fields (tested).
-3. The provider may only return **structured operations**: `{path, op: "set" | "delta", value}`, at most 6 per
-   candidate, over the current renderer's existing controls.
-4. The backend validates every operation (`model.apply_operations`). Unknown paths, pinned paths, non-finite values and
-   out-of-range values are rejected. The browser re-validates with `DLCore.applyOperations`.
-5. Valid candidates appear in **Compare** with their source labelled. **Nothing changes until someone chooses one.**
-   Each set is recorded in `proposals` with `source: "ai"`, the provider and model, and any rejected operations.
+2. **Propose.** The backend sends the AI the description, the current parameters and pins, the earlier descriptions in
+   this session, and plain-language notes on what the numbers mean visually. For example: "a quarter stripe period is
+   0.078°; half a period swaps black and white". When the provider can see images (Claude), the message also includes
+   the **reference** and **current** pictures. The AI returns up to 6 candidates as bounded operations
+   `{path, op: "set" | "delta", value}`. It must also state in `limitations` anything in the request the controls
+   cannot produce.
+3. **Validate.** Every operation is checked (`model.apply_operations`). Unknown paths, pinned paths, non-finite values
+   and out-of-range values are rejected.
+4. **Look and pick** (image-capable providers). The browser also sends up to 8 seeded alternatives. The backend renders
+   every valid candidate, shows the AI the reference, the current picture and all candidates, and asks it to rank the 4
+   that best show the described change and nothing else, with a one-sentence reason each. It excludes ones that look
+   unchanged or change the wrong thing.
+5. The chosen candidates appear in **Compare** with the AI's reasons, its stated limitations and its notes. **Nothing
+   changes until someone chooses one.** Each set is recorded in `proposals` with `source: "ai"`, the provider and model,
+   the limitations and notes, how many candidates were considered, and the seed of the seeded pool.
 
-No generated code is executed, the live experiment is not altered, and the renderer stays deterministic.
+Only task context is sent: renderer, parameters, pins, reference grating, geometry, the description (text, region,
+ticked properties) and up to 5 earlier description texts. Participant label, condition and notes are never sent, and
+the backend refuses context containing other fields (tested). No generated code is executed, and the renderer stays
+deterministic.
 
 ## Recommended: Claude through your Claude plan (no API key, no extra billing)
 
@@ -47,8 +55,11 @@ What the backend does on each request (`distortion_lab/ai_bridge.py`):
 - Optional settings: `DISTORTION_LAB_CLAUDE_MODEL` (e.g. `sonnet`) chooses the model. `DISTORTION_LAB_CLAUDE_BIN` sets
   the path to `claude` if it isn't found automatically.
 
-Tested on 2026-11-02 with Claude Code 2.1.316. A real suggestion request through the backend returned four candidates,
-all valid and none touching a pinned field. An offline stand-in (`tests/fake_claude.py`) checks the flags, the empty
+Tested on 2026-11-02 with Claude Code 2.1.316. Live test of the two-step flow: the description "below the break the
+lines are zig zagged, but above the break they are straight" took 26 s. Claude considered 14 rendered candidates and
+returned four. All four limited the zigzag to the lower side of the break, at different strengths, and the excluded
+ones were explained. A request makes two Claude calls, so it uses roughly twice the plan usage of a single chat message
+with images. An offline stand-in (`tests/fake_claude.py`) checks the flags, the empty
 folder and the removal of API-key variables in the automated tests.
 
 Privacy: descriptions go to Anthropic under your personal account's terms. Check your Claude privacy settings (for

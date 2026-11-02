@@ -120,6 +120,7 @@ def _semantic_prepare(p):
     b = (p["orientation"] + p["crossAngle"]) * DEG
     oa = p["offsetAngle"] * DEG
     ha = p["holeAngle"] * DEG
+    q["usesSides"] = any(p.get(k) in ("upper", "lower") for k in ("bendSide", "zigSide", "fragSide", "crossSide"))
     q.update(sa=math.sin(a), ca=math.cos(a), phr=p["phase"] * math.pi / 180, sb=math.sin(b), cb=math.cos(b),
              soa=math.sin(oa), coa=math.cos(oa), sh=math.sin(ha), ch=math.cos(ha),
              br=[(math.cos(ha + i * 2 * math.pi / 3), math.sin(ha + i * 2 * math.pi / 3)) for i in range(3)])
@@ -141,21 +142,27 @@ def _hole_distance(x, y, q):
     return best - q["holeSize"]
 
 
+def _side_weight(side, H):
+    return H if side == "upper" else (1 - H if side == "lower" else 1)
+
+
 def _semantic_signal(x, y, q):
     u = -x * q["sa"] + y * q["ca"]
     v = x * q["ca"] + y * q["sa"]
     d = 0.0
-    if q["bendAmount"] != 0:
-        d += q["bendAmount"] * math.sin(TAU * v / q["bendSpacing"] + q["bendPhase"] * DEG)
-    if q["zigAmount"] != 0:
-        t = v / q["zigSpacing"] + q["zigPhase"] / 360
-        d += q["zigAmount"] * ((1 - q["zigShape"]) * _tri(t) + q["zigShape"] * _step(t))
-    if q["offsetAmount"] != 0:
+    H = 1.0
+    if q["offsetAmount"] != 0 or q["usesSides"]:
         w = v * q["coa"] + u * q["soa"] - q["offsetPosition"]
         if q["offsetSoftness"] > 0:
             H = 0.5 * (1 + math.tanh(w / q["offsetSoftness"]))
         else:
             H = 1.0 if w >= 0 else 0.0
+    if q["bendAmount"] != 0:
+        d += _side_weight(q.get("bendSide"), H) * q["bendAmount"] * math.sin(TAU * v / q["bendSpacing"] + q["bendPhase"] * DEG)
+    if q["zigAmount"] != 0:
+        t = v / q["zigSpacing"] + q["zigPhase"] / 360
+        d += _side_weight(q.get("zigSide"), H) * q["zigAmount"] * ((1 - q["zigShape"]) * _tri(t) + q["zigShape"] * _step(t))
+    if q["offsetAmount"] != 0:
         d += q["offsetAmount"] * (H - 0.5)
     s = u + d
     P = _profile(math.cos(2 * math.pi * q["frequency"] * s + q["phr"]), q["sharpness"])
@@ -163,10 +170,16 @@ def _semantic_signal(x, y, q):
         n = math.floor(q["frequency"] * s + q["phase"] / 360)
         tt = v / q["fragLength"] + q["fragJitter"] * hash01(n, int(q["fragSeed"]))
         if tt - math.floor(tt) < q["fragExtent"]:
-            P = q["gapFill"]
+            wf = _side_weight(q.get("fragSide"), H)
+            if wf == 1:
+                P = q["gapFill"]
+            elif wf > 0:
+                P = P + wf * (q["gapFill"] - P)
     if q["crossStrength"] > 0:
-        gc = math.cos(TAU * (-x * q["sb"] + y * q["cb"]) / q["crossSpacing"] + q["crossPhase"] * DEG)
-        P = _clamp(P + q["crossStrength"] * _profile(gc, q["sharpness"]), -1.0, 1.0)
+        wc = _side_weight(q.get("crossSide"), H)
+        if wc > 0:
+            gc = math.cos(TAU * (-x * q["sb"] + y * q["cb"]) / q["crossSpacing"] + q["crossPhase"] * DEG)
+            P = _clamp(P + wc * q["crossStrength"] * _profile(gc, q["sharpness"]), -1.0, 1.0)
     if q["holeSize"] > 0:
         dist = _hole_distance(x, y, q)
         if q["holeSoftness"] > 0:
@@ -309,6 +322,11 @@ def validate_recon(r):
     _no_extra(r, ("renderer", "rendererVersion", "params"), "reconstruction")
     p = _obj(r.get("params"), "reconstruction.params")
     if r.get("renderer") == "semantic-grating":
+        if r.get("rendererVersion") == "1.0.0":  # migrate: side-limited features added ('whole' is pixel-identical)
+            up = dict(p)
+            for k in ("bendSide", "zigSide", "fragSide", "crossSide"):
+                up.setdefault(k, "whole")
+            r, p = {"renderer": r["renderer"], "rendererVersion": SEM["version"], "params": up}, up
         if r.get("rendererVersion") != SEM["version"]:
             _fail("Unsupported semantic-grating version %r" % r.get("rendererVersion"))
         _no_extra(p, SEM_DEFS, "semantic params")

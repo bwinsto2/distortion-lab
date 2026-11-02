@@ -147,7 +147,7 @@
   },
   "renderers": {
    "semantic-grating": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "label": "Semantic appearance generator",
     "description": "Explicit deterministic appearance generator: one carrier grating with documented coordinate displacements (bend, zigzag/step, offset), interruption, crossing pattern and gap mask. Not part of the Olianezhad et al. synthesis model.",
     "families": {
@@ -167,8 +167,8 @@
       "activator": "zigAmount"
      },
      "offset": {
-      "label": "Offset",
-      "plain": "Part of the stripes is shifted at a boundary",
+      "label": "Offset / boundary line",
+      "plain": "A boundary line across the stripes: stripes can shift there, and other features can be limited to one side of it",
       "activator": "offsetAmount"
      },
      "fragment": {
@@ -283,6 +283,24 @@
       "default": 1.2
      },
      {
+      "key": "bendSide",
+      "family": "bend",
+      "label": "Bending applies to",
+      "type": "enum",
+      "choices": [
+       "whole",
+       "upper",
+       "lower"
+      ],
+      "choiceLabels": {
+       "whole": "Whole picture",
+       "upper": "Upper side of boundary",
+       "lower": "Lower side of boundary"
+      },
+      "default": "whole",
+      "side": true
+     },
+     {
       "key": "bendPhase",
       "family": "bend",
       "label": "Bend position",
@@ -335,6 +353,24 @@
       "proposal": 0.25,
       "unit": "",
       "default": 0
+     },
+     {
+      "key": "zigSide",
+      "family": "zigzag",
+      "label": "Zigzag / steps apply to",
+      "type": "enum",
+      "choices": [
+       "whole",
+       "upper",
+       "lower"
+      ],
+      "choiceLabels": {
+       "whole": "Whole picture",
+       "upper": "Upper side of boundary",
+       "lower": "Lower side of boundary"
+      },
+      "default": "whole",
+      "side": true
      },
      {
       "key": "zigPhase",
@@ -430,6 +466,24 @@
       "proposal": 0.15,
       "unit": "°",
       "default": 0.6
+     },
+     {
+      "key": "fragSide",
+      "family": "fragment",
+      "label": "Breaks apply to",
+      "type": "enum",
+      "choices": [
+       "whole",
+       "upper",
+       "lower"
+      ],
+      "choiceLabels": {
+       "whole": "Whole picture",
+       "upper": "Upper side of boundary",
+       "lower": "Lower side of boundary"
+      },
+      "default": "whole",
+      "side": true
      },
      {
       "key": "fragJitter",
@@ -613,6 +667,24 @@
       "default": 0.5
      },
      {
+      "key": "crossSide",
+      "family": "cross",
+      "label": "Crossing lines apply to",
+      "type": "enum",
+      "choices": [
+       "whole",
+       "upper",
+       "lower"
+      ],
+      "choiceLabels": {
+       "whole": "Whole picture",
+       "upper": "Upper side of boundary",
+       "lower": "Lower side of boundary"
+      },
+      "default": "whole",
+      "side": true
+     },
+     {
       "key": "crossPhase",
       "family": "cross",
       "label": "Crossing position",
@@ -627,7 +699,10 @@
       "default": 0,
       "advanced": true
      }
-    ]
+    ],
+    "migrations": {
+     "1.0.0": "Add bendSide/zigSide/fragSide/crossSide = 'whole' (pixel-identical)."
+    }
    },
    "legacy-rectified": {
     "version": "1.0.0",

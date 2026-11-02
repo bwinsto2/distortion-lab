@@ -53,7 +53,7 @@ dials. In this mode, autosave goes only to the browser's local storage.
    **None of these are close** goes straight to description capture. The ten original "Barrett-inspired" forms are
    available under *Original synthesis forms (advanced)*. Researcher labels can be hidden.
 2. **Adjust.** Higher-order sliders such as bend amount/spacing, zigzag/step strength/spacing/corner style, offset
-   amount/boundary, break extent/spacing, gap size/position/shape/stripe visibility, crossing strength/angle/spacing,
+   amount/boundary (and limiting bends, zigzags, breaks or crossing lines to one side of that boundary), break extent/spacing, gap size/position/shape/stripe visibility, crossing strength/angle/spacing,
    and orientation/frequency/phase/contrast. Only relevant controls are shown at first. **+ feature** reveals more,
    **more controls** shows advanced ones, and you can switch between fine and coarse slider steps. Each control can be
    **pinned**.

@@ -245,24 +245,27 @@ class TestMockAI(ServerCase):
         self.assertFalse(j["ai"]["isAI"])
         self.assertIn("not AI", j["ai"]["label"])
         s = self.example()
-        ctx = {"softwareVersion": M.VERSION, "renderer": "semantic-grating", "rendererVersion": "1.0.0", "reference": s["reference"],
+        ctx = {"softwareVersion": M.VERSION, "renderer": "semantic-grating", "rendererVersion": "1.1.0", "reference": s["reference"],
                "params": s["work"]["recon"]["params"], "pins": s["work"]["pins"], "focus": "auto",
+               "geometry": {"diameter": 3.2, "sigma": 0.53, "aperture": "circle"}, "history": ["earlier text"],
                "description": {"text": "the stripes look wavy and there is a hole", "region": None, "properties": []}}
-        code, j = self.req("POST", "/api/ai/propose", {"work": s["work"], "context": ctx, "count": 6})
+        pool = [dict(s["work"]["recon"], params=dict(s["work"]["recon"]["params"], phase=40))]
+        code, j = self.req("POST", "/api/ai/propose", {"work": s["work"], "context": ctx, "count": 4, "pool": pool})
         self.assertEqual(code, 200, j)
-        by_label = {c["label"]: c for c in j["candidates"]}
         # holeSize is pinned in the example: the mock's holeSize proposal must be rejected
-        hole = [c for c in j["candidates"] if any(o["path"] == "holeSize" for o in c["operations"])][0]
-        self.assertIsNone(hole["recon"])
+        hole = [c for c in j["rejectedSets"] if any(o["path"] == "holeSize" for o in c["operations"])][0]
         self.assertIn("pinned", hole["rejected"][0]["reason"])
-        oob = [c for c in j["candidates"] if any(o["path"] == "bendAmount" and o["value"] == 9 for o in c["operations"])][0]
-        self.assertIsNone(oob["recon"])
-        good = [c for c in j["candidates"] if c["recon"]]
-        self.assertTrue(good)
-        for c in good:
+        self.assertTrue(any(any(o["path"] == "bendAmount" and o["value"] == 9 for o in c["operations"]) for c in j["rejectedSets"]))
+        self.assertTrue(j["judged"])
+        self.assertTrue(j["candidates"])
+        self.assertLessEqual(len(j["candidates"]), 4)
+        for c in j["candidates"]:
             self.assertEqual(c["recon"]["params"]["holeSize"], s["work"]["recon"]["params"]["holeSize"])
             M.validate_recon(c["recon"])
-        self.assertTrue(by_label)
+        # a pool candidate that changes a pinned field is refused outright
+        bad_pool = [dict(s["work"]["recon"], params=dict(s["work"]["recon"]["params"], holeSize=0.01))]
+        code, j = self.req("POST", "/api/ai/propose", {"work": s["work"], "context": ctx, "pool": bad_pool})
+        self.assertEqual(code, 400)
 
     def test_context_with_identity_fields_is_refused(self):
         s = self.example()
@@ -355,14 +358,18 @@ class TestClaudeCodeProvider(ServerCase):
         self.assertTrue(j["ai"]["connected"], j)
         self.assertIn("your plan", j["ai"]["label"])
         s = self.example()
-        ctx = {"renderer": "semantic-grating", "description": {"text": "more wavy", "region": None, "properties": []}}
-        code, j = self.req("POST", "/api/ai/propose", {"work": s["work"], "context": ctx})
+        ctx = {"renderer": "semantic-grating", "reference": s["reference"], "description": {"text": "more wavy", "region": None, "properties": []}}
+        pool = [dict(s["work"]["recon"], params=dict(s["work"]["recon"]["params"], phase=p)) for p in (40, 80)]
+        code, j = self.req("POST", "/api/ai/propose", {"work": s["work"], "context": ctx, "pool": pool})
         self.assertEqual(code, 200, j)
         self.assertEqual(j["provider"], "claude-code")
-        good = [c for c in j["candidates"] if c["recon"]]
-        bad = [c for c in j["candidates"] if not c["recon"]]
-        self.assertEqual(good[0]["recon"]["params"]["bendAmount"], 0.2)
-        self.assertIn("pinned", bad[0]["rejected"][0]["reason"])
+        self.assertEqual(j["limitations"], "fake: cannot do X")
+        self.assertTrue(j["judged"])
+        self.assertEqual(j["considered"], 3)              # 1 valid AI proposal + 2 pool alternatives
+        self.assertEqual([c["source"] for c in j["candidates"]], ["pool", "pool", "ai"])   # judge order, not proposal order
+        self.assertIn("saw 5 images", j["candidates"][0]["judgeReason"])                    # REFERENCE, CURRENT, C1..C3
+        self.assertEqual(j["candidates"][2]["recon"]["params"]["bendAmount"], 0.2)
+        self.assertIn("pinned", j["rejectedSets"][0]["rejected"][0]["reason"])
 
     def test_missing_binary_reported(self):
         b = Bridge({"DISTORTION_LAB_AI": "claude-code", "DISTORTION_LAB_CLAUDE_BIN": ""})
@@ -407,3 +414,19 @@ class TestStartup(unittest.TestCase):
             h2.server_close()
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestMigration(unittest.TestCase):
+    def test_semantic_1_0_0_accepted_and_identical(self):
+        with open(EXAMPLE, encoding="utf-8") as f:
+            s = json.load(f)
+        old = copy.deepcopy(s["work"]["recon"])
+        old["rendererVersion"] = "1.0.0"
+        for k in ("bendSide", "zigSide", "fragSide", "crossSide"):
+            old["params"].pop(k, None)
+        m = M.validate_recon(old)
+        self.assertEqual(m["rendererVersion"], "1.1.0")
+        g = {"diameter": 3.2, "sigma": 0.5, "aperture": "circle"}
+        self.assertEqual(M.render_gray(old, 48, g), M.render_gray(m, 48, g))
+        s["work"]["recon"] = old
+        M.validate_session(s)
