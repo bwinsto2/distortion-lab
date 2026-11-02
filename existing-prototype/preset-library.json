@@ -1,0 +1,578 @@
+{
+  "schema": "distortion-lab/presets/1",
+  "version": "0.2.0",
+  "source": "https://doi.org/10.1523/JNEUROSCI.1111-25.2025",
+  "description": "Barrett-inspired form explorations. Names describe visual analogues, not a validated reconstruction of the published taxonomy or participant percepts.",
+  "presets": [
+    {
+      "id": "identity",
+      "index": 1,
+      "name": "Undistorted reference",
+      "category": "Control",
+      "status": "Exact physical identity",
+      "note": "One sinusoidal component, without distortion.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 90,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 90,
+            "frequency": 4,
+            "phase": 0,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 1
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "misorientation",
+      "index": 2,
+      "name": "Misorientation",
+      "category": "Misorientation",
+      "status": "Illustrative construction",
+      "note": "A uniform 25 degree orientation difference. This demonstrates global misorientation, not a local patch of misoriented stripes.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 90,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 65,
+            "frequency": 4,
+            "phase": 0,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 1
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "wavy",
+      "index": 3,
+      "name": "Wavy stripes",
+      "category": "Wavy",
+      "status": "Illustrative construction",
+      "note": "A carrier plus two oblique sidebands approximates sinusoidal phase modulation. The bars bend; no coordinate warp is used.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 90,
+        "frequency": 3.2,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 90,
+            "frequency": 3.2,
+            "phase": 90,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 6
+          },
+          {
+            "id": 2,
+            "enabled": true,
+            "orientation": 69.4,
+            "frequency": 3.42,
+            "phase": 90,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 2
+          },
+          {
+            "id": 3,
+            "enabled": true,
+            "orientation": 110.6,
+            "frequency": 3.42,
+            "phase": 270,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 2
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "stepped",
+      "index": 4,
+      "name": "Stepped / angular stripes",
+      "category": "Angular / zigzag",
+      "status": "Approximate form",
+      "note": "Eleven components: an oblique carrier and five pairs of Fourier sidebands approximate square-wave phase modulation. Small ringing and rounded corners remain; these are not the published Barrett or Olianezhad parameter values.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 0,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 11.3,
+            "frequency": 4.08,
+            "phase": 0,
+            "duty": 0.04,
+            "threshold": 1,
+            "weight": 10
+          },
+          {
+            "id": 2,
+            "enabled": true,
+            "orientation": 28.8,
+            "frequency": 4.57,
+            "phase": 180,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 6.05
+          },
+          {
+            "id": 3,
+            "enabled": true,
+            "orientation": 171.5,
+            "frequency": 4.04,
+            "phase": 0,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 6.05
+          },
+          {
+            "id": 4,
+            "enabled": true,
+            "orientation": 51.3,
+            "frequency": 6.4,
+            "phase": 180,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 2.02
+          },
+          {
+            "id": 5,
+            "enabled": true,
+            "orientation": 139.6,
+            "frequency": 5.25,
+            "phase": 0,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 2.02
+          },
+          {
+            "id": 6,
+            "enabled": true,
+            "orientation": 62.9,
+            "frequency": 8.77,
+            "phase": 180,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 1.21
+          },
+          {
+            "id": 7,
+            "enabled": true,
+            "orientation": 122.8,
+            "frequency": 7.38,
+            "phase": 0,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 1.21
+          },
+          {
+            "id": 8,
+            "enabled": true,
+            "orientation": 69.3,
+            "frequency": 11.33,
+            "phase": 180,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 0.86
+          },
+          {
+            "id": 9,
+            "enabled": true,
+            "orientation": 114,
+            "frequency": 9.85,
+            "phase": 0,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 0.86
+          },
+          {
+            "id": 10,
+            "enabled": true,
+            "orientation": 73.4,
+            "frequency": 13.98,
+            "phase": 180,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 0.67
+          },
+          {
+            "id": 11,
+            "enabled": true,
+            "orientation": 108.7,
+            "frequency": 12.46,
+            "phase": 0,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 0.67
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "offset",
+      "index": 5,
+      "name": "Abrupt offset / seam",
+      "category": "Abrupt offset",
+      "status": "Approximate form",
+      "note": "Two nearly aligned clipped gratings create a sharp beat-related seam and phase-like offset. There is residual interference and the seam is not an independently positioned local displacement.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 90,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 90,
+            "frequency": 4,
+            "phase": 0,
+            "duty": 0.6,
+            "threshold": 0.4,
+            "weight": 14
+          },
+          {
+            "id": 2,
+            "enabled": true,
+            "orientation": 96,
+            "frequency": 4,
+            "phase": 90,
+            "duty": -0.6,
+            "threshold": 0.4,
+            "weight": 14
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "fragmented",
+      "index": 6,
+      "name": "Fragmented bars",
+      "category": "Fragmented",
+      "status": "Illustrative construction",
+      "note": "A vertical carrier and a lower-frequency horizontal component leave isolated dark bar fragments through clipping and saturation.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 90,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 90,
+            "frequency": 4,
+            "phase": 0,
+            "duty": 0.6,
+            "threshold": 0.6,
+            "weight": 8
+          },
+          {
+            "id": 2,
+            "enabled": true,
+            "orientation": 0,
+            "frequency": 1.3,
+            "phase": 0,
+            "duty": 0.6,
+            "threshold": 0.6,
+            "weight": 10
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "crossed",
+      "index": 7,
+      "name": "Crossed / added orientation",
+      "category": "Orientation intrusion",
+      "status": "Illustrative construction",
+      "note": "Two differently oriented rectified gratings and a very low-frequency bias component generate crossing bars. This is a related form rather than a separate canonical Barrett category.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 0,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 0,
+            "frequency": 4,
+            "phase": 0,
+            "duty": 0.8,
+            "threshold": 0.2,
+            "weight": 8
+          },
+          {
+            "id": 2,
+            "enabled": true,
+            "orientation": 135,
+            "frequency": 2,
+            "phase": 0,
+            "duty": 0.8,
+            "threshold": 0.2,
+            "weight": 8
+          },
+          {
+            "id": 3,
+            "enabled": true,
+            "orientation": 0,
+            "frequency": 0.1,
+            "phase": 180,
+            "duty": -1,
+            "threshold": 2,
+            "weight": 0.8
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "hole",
+      "index": 8,
+      "name": "Central white hole",
+      "category": "Scotomatous-like",
+      "status": "Illustrative construction",
+      "note": "Two low-frequency components saturate a rounded central region to white while a higher-frequency vertical carrier remains at the periphery. This is an image analogue of a reported gap, not a simulated or diagnosed visual scotoma.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 90,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 90,
+            "frequency": 4,
+            "phase": 0,
+            "duty": 0,
+            "threshold": 1,
+            "weight": 6
+          },
+          {
+            "id": 2,
+            "enabled": true,
+            "orientation": 90,
+            "frequency": 0.3,
+            "phase": 0,
+            "duty": 0.05,
+            "threshold": 1.3,
+            "weight": 4
+          },
+          {
+            "id": 3,
+            "enabled": true,
+            "orientation": 0,
+            "frequency": 0.3,
+            "phase": 0,
+            "duty": 0.05,
+            "threshold": 1.3,
+            "weight": 4
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "band-gap",
+      "index": 9,
+      "name": "Broad missing band",
+      "category": "Scotomatous-like",
+      "status": "Illustrative construction",
+      "note": "A low-frequency horizontal component and a vertical carrier create a broad white band. The edges taper because they arise from summed signals rather than a painted mask.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 90,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 90,
+            "frequency": 4,
+            "phase": 0,
+            "duty": 0.4,
+            "threshold": 0.6,
+            "weight": 6
+          },
+          {
+            "id": 2,
+            "enabled": true,
+            "orientation": 0,
+            "frequency": 0.4,
+            "phase": 0,
+            "duty": 0.4,
+            "threshold": 1.4,
+            "weight": 4.5
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    },
+    {
+      "id": "three-branch",
+      "index": 10,
+      "name": "Three-branch white gap",
+      "category": "Scotomatous-like",
+      "status": "Partial approximation",
+      "note": "Three low-frequency components with alternating phases create a connected three-branch white gap over one carrier. This does not reproduce the different surviving stripe orientations in the published Y-shaped example.",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+      "reference": {
+        "orientation": 90,
+        "frequency": 4,
+        "phase": 0,
+        "contrast": 1
+      },
+      "model": {
+        "contrast": 1,
+        "components": [
+          {
+            "id": 1,
+            "enabled": true,
+            "orientation": 90,
+            "frequency": 4,
+            "phase": 0,
+            "duty": 0.2,
+            "threshold": 1,
+            "weight": 6
+          },
+          {
+            "id": 2,
+            "enabled": true,
+            "orientation": 0,
+            "frequency": 0.4,
+            "phase": 270,
+            "duty": 0.5,
+            "threshold": 2,
+            "weight": 4
+          },
+          {
+            "id": 3,
+            "enabled": true,
+            "orientation": 60,
+            "frequency": 0.4,
+            "phase": 90,
+            "duty": 0.5,
+            "threshold": 2,
+            "weight": 4
+          },
+          {
+            "id": 4,
+            "enabled": true,
+            "orientation": 120,
+            "frequency": 0.4,
+            "phase": 270,
+            "duty": 0.5,
+            "threshold": 2,
+            "weight": 4
+          }
+        ]
+      },
+      "geometry": {
+        "diameter": 3.2,
+        "sigma": 0.53,
+        "aperture": "circle"
+      }
+    }
+  ]
+}

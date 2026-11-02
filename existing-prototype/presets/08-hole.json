@@ -1,0 +1,83 @@
+{
+  "schema": "distortion-lab/session/1",
+  "version": "0.2.0",
+  "modelImplementation": "Olianezhad Eqs 1-2 synthesis; direct W; final clip +/-1; common post-synthesis aperture",
+  "source": "https://doi.org/10.1523/JNEUROSCI.1111-25.2025",
+  "sessionId": "illustrative-preset-hole",
+  "startedAt": "2026-11-02T03:55:48.575Z",
+  "exportedAt": "2026-11-02T03:55:48.575Z",
+  "state": {
+    "schema": "distortion-lab/1",
+    "version": "0.2.0",
+    "reference": {
+      "orientation": 90,
+      "frequency": 4,
+      "phase": 0,
+      "contrast": 1
+    },
+    "model": {
+      "contrast": 1,
+      "components": [
+        {
+          "id": 1,
+          "enabled": true,
+          "orientation": 90,
+          "frequency": 4,
+          "phase": 0,
+          "duty": 0,
+          "threshold": 1,
+          "weight": 6
+        },
+        {
+          "id": 2,
+          "enabled": true,
+          "orientation": 90,
+          "frequency": 0.3,
+          "phase": 0,
+          "duty": 0.05,
+          "threshold": 1.3,
+          "weight": 4
+        },
+        {
+          "id": 3,
+          "enabled": true,
+          "orientation": 0,
+          "frequency": 0.3,
+          "phase": 0,
+          "duty": 0.05,
+          "threshold": 1.3,
+          "weight": 4
+        }
+      ]
+    },
+    "layout": {
+      "referenceSide": "left",
+      "leftEye": "unassigned",
+      "rightEye": "unassigned",
+      "linked": false,
+      "diameter": 3.2,
+      "sigma": 0.53,
+      "aperture": "circle",
+      "ppd": 80,
+      "separation": 50,
+      "vertical": 0,
+      "fixation": false
+    },
+    "visibility": "both",
+    "selected": 1
+  },
+  "participant": "",
+  "condition": "illustrative-preset",
+  "notes": "Central white hole. Illustrative construction. Two low-frequency components saturate a rounded central region to white while a higher-frequency vertical carrier remains at the periphery. This is an image analogue of a reported gap, not a simulated or diagnosed visual scotoma. Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+  "outcome": "approximate",
+  "presetOrigin": "hole",
+  "trials": [],
+  "history": [
+    {
+      "time": "2026-11-02T03:55:48.575Z",
+      "action": "illustrative-preset-created",
+      "id": "hole",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set."
+    }
+  ]
+}

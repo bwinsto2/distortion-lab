@@ -1,0 +1,10 @@
+Validation of this saved version
+
+- All ten preset sessions restored through the GUI file chooser, including the eleven-component stepped pattern. Component counts and selected preset IDs matched.
+- All ten forms applied through the preset selector.
+- Fourteen built-in numerical and schema checks passed.
+- Applying a form preserved eye routing, pixels-per-degree calibration, and an existing accepted record. Exported JSON retained both the earlier recorded state and the new current state.
+- The GUI-exported 512 x 512 central-hole stimulus was pixel-identical to the packaged 512 x 512 preset PNG.
+- Gallery and session downloads completed successfully.
+
+These checks verify software behavior and parameter/image consistency. They do not establish perceptual validity, uniqueness of component decompositions, or faithful replication of published drawings.

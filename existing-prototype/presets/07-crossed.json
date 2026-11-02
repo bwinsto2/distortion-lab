@@ -1,0 +1,83 @@
+{
+  "schema": "distortion-lab/session/1",
+  "version": "0.2.0",
+  "modelImplementation": "Olianezhad Eqs 1-2 synthesis; direct W; final clip +/-1; common post-synthesis aperture",
+  "source": "https://doi.org/10.1523/JNEUROSCI.1111-25.2025",
+  "sessionId": "illustrative-preset-crossed",
+  "startedAt": "2026-11-02T03:55:48.575Z",
+  "exportedAt": "2026-11-02T03:55:48.575Z",
+  "state": {
+    "schema": "distortion-lab/1",
+    "version": "0.2.0",
+    "reference": {
+      "orientation": 0,
+      "frequency": 4,
+      "phase": 0,
+      "contrast": 1
+    },
+    "model": {
+      "contrast": 1,
+      "components": [
+        {
+          "id": 1,
+          "enabled": true,
+          "orientation": 0,
+          "frequency": 4,
+          "phase": 0,
+          "duty": 0.8,
+          "threshold": 0.2,
+          "weight": 8
+        },
+        {
+          "id": 2,
+          "enabled": true,
+          "orientation": 135,
+          "frequency": 2,
+          "phase": 0,
+          "duty": 0.8,
+          "threshold": 0.2,
+          "weight": 8
+        },
+        {
+          "id": 3,
+          "enabled": true,
+          "orientation": 0,
+          "frequency": 0.1,
+          "phase": 180,
+          "duty": -1,
+          "threshold": 2,
+          "weight": 0.8
+        }
+      ]
+    },
+    "layout": {
+      "referenceSide": "left",
+      "leftEye": "unassigned",
+      "rightEye": "unassigned",
+      "linked": false,
+      "diameter": 3.2,
+      "sigma": 0.53,
+      "aperture": "circle",
+      "ppd": 80,
+      "separation": 50,
+      "vertical": 0,
+      "fixation": false
+    },
+    "visibility": "both",
+    "selected": 1
+  },
+  "participant": "",
+  "condition": "illustrative-preset",
+  "notes": "Crossed / added orientation. Illustrative construction. Two differently oriented rectified gratings and a very low-frequency bias component generate crossing bars. This is a related form rather than a separate canonical Barrett category. Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+  "outcome": "approximate",
+  "presetOrigin": "crossed",
+  "trials": [],
+  "history": [
+    {
+      "time": "2026-11-02T03:55:48.575Z",
+      "action": "illustrative-preset-created",
+      "id": "crossed",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set."
+    }
+  ]
+}

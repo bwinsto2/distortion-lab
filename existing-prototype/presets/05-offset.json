@@ -1,0 +1,73 @@
+{
+  "schema": "distortion-lab/session/1",
+  "version": "0.2.0",
+  "modelImplementation": "Olianezhad Eqs 1-2 synthesis; direct W; final clip +/-1; common post-synthesis aperture",
+  "source": "https://doi.org/10.1523/JNEUROSCI.1111-25.2025",
+  "sessionId": "illustrative-preset-offset",
+  "startedAt": "2026-11-02T03:55:48.575Z",
+  "exportedAt": "2026-11-02T03:55:48.575Z",
+  "state": {
+    "schema": "distortion-lab/1",
+    "version": "0.2.0",
+    "reference": {
+      "orientation": 90,
+      "frequency": 4,
+      "phase": 0,
+      "contrast": 1
+    },
+    "model": {
+      "contrast": 1,
+      "components": [
+        {
+          "id": 1,
+          "enabled": true,
+          "orientation": 90,
+          "frequency": 4,
+          "phase": 0,
+          "duty": 0.6,
+          "threshold": 0.4,
+          "weight": 14
+        },
+        {
+          "id": 2,
+          "enabled": true,
+          "orientation": 96,
+          "frequency": 4,
+          "phase": 90,
+          "duty": -0.6,
+          "threshold": 0.4,
+          "weight": 14
+        }
+      ]
+    },
+    "layout": {
+      "referenceSide": "left",
+      "leftEye": "unassigned",
+      "rightEye": "unassigned",
+      "linked": false,
+      "diameter": 3.2,
+      "sigma": 0.53,
+      "aperture": "circle",
+      "ppd": 80,
+      "separation": 50,
+      "vertical": 0,
+      "fixation": false
+    },
+    "visibility": "both",
+    "selected": 1
+  },
+  "participant": "",
+  "condition": "illustrative-preset",
+  "notes": "Abrupt offset / seam. Approximate form. Two nearly aligned clipped gratings create a sharp beat-related seam and phase-like offset. There is residual interference and the seam is not an independently positioned local displacement. Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set.",
+  "outcome": "approximate",
+  "presetOrigin": "offset",
+  "trials": [],
+  "history": [
+    {
+      "time": "2026-11-02T03:55:48.575Z",
+      "action": "illustrative-preset-created",
+      "id": "offset",
+      "provenance": "Independent illustrative construction within the GUI synthesis family; not a participant match or an authors’ fitted parameter set."
+    }
+  ]
+}
