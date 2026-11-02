@@ -10,6 +10,7 @@
 <header class="topbar">
   <div class="brand"><strong>Distortion Lab</strong> <span id="version" class="muted"></span></div>
   <div class="pills">
+    <span id="sessionPill" class="pill" title="Participant and session">No session</span>
     <span id="backendStatus" class="pill" title="Backend connection">Backend…</span>
     <span id="aiStatus" class="pill" title="Optional AI bridge">AI…</span>
     <span id="saveStatus" class="pill muted" title="Autosave status">Not saved yet</span>
@@ -22,11 +23,35 @@
   </div>
 </header>
 
-<div id="resumeBanner" class="banner" hidden>
-  <span id="resumeText"></span>
-  <button id="resumeYes" class="primary">Resume</button>
-  <button id="resumeNo">Start a new session</button>
-</div>
+<dialog id="startDialog" class="start-dialog" aria-labelledby="startTitle">
+  <form id="startForm" novalidate>
+    <h2 id="startTitle">Start a session</h2>
+    <div id="startResumeBox" class="resume-box" hidden>
+      <p id="startResumeText"></p>
+      <button type="button" id="startResume" class="primary">Continue this session</button>
+      <p class="note">Or start a new one below. The unfinished session stays saved.</p>
+    </div>
+    <label for="startParticipant">Participant ID</label>
+    <input id="startParticipant" maxlength="120" autocomplete="off" placeholder="e.g. P-07">
+    <p class="note">Use a pseudonymous code, not a name.</p>
+    <label for="startSession">Session</label>
+    <input id="startSession" maxlength="120" autocomplete="off" list="sessionSuggestions" placeholder="e.g. Baseline 1">
+    <datalist id="sessionSuggestions"></datalist>
+    <fieldset>
+      <legend>Amblyopic eye</legend>
+      <label class="toggle"><input type="radio" name="startEye" value="left"> Left</label>
+      <label class="toggle"><input type="radio" name="startEye" value="right"> Right</label>
+      <label class="toggle"><input type="radio" name="startEye" value="unset" checked> Set later</label>
+    </fieldset>
+    <p class="note">The reference grating is shown on the amblyopic eye's side of the stereoscope and the reconstruction on the fellow eye's side. Optics and calibration carry over from the last session.</p>
+    <p id="startError" class="start-error" role="alert"></p>
+    <div class="row">
+      <button type="submit" id="startGo" class="primary">Start</button>
+      <button type="button" id="startPractice">Practice without an ID</button>
+      <button type="button" id="startCancel" hidden>Cancel</button>
+    </div>
+  </form>
+</dialog>
 <div id="browserOnly" class="banner warn" hidden>
   <strong>Browser-only mode.</strong> The Python backend is not reachable, so this page autosaves only to this browser's local storage.
   Not available here: server-side session files and SQLite index, Python-rendered export bundles, the AI bridge, and external dial control.

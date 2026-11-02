@@ -46,6 +46,10 @@ dials. In this mode, autosave goes only to the browser's local storage.
 
 ## The matching workflow
 
+0. **Start.** The start screen asks for the **participant ID** (a pseudonymous code), the **session** name and the
+   amblyopic eye, which sets the routing: reference on the amblyopic eye's side. It also offers to continue an
+   unfinished session. *Practice without an ID* is available for demonstrations.
+
 1. **Choose.** A gallery of thumbnails rendered from the current reference grating: unchanged reference, tilted, wavy,
    zigzag, stepped, offset, broken, crossing lines, round gap, missing band and branching gap, each mild and strong, plus
    combinations. Participants pick the closest one. **More than one of these** lets them pick two features and see

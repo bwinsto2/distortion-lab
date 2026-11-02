@@ -631,10 +631,72 @@
     }).catch(function (e) { toast('Could not open file: ' + e.message, 6000); });
   }
   function newSession() {
-    if (!confirm('Start a new session? The current one stays autosaved. Optics, routing and calibration are kept.')) return;
-    saveNow();
-    replaceSession(C.newSession({ reference: S.reference, layout: S.layout }), 'New session started.');
+    openStart({ cancelable: true, participant: S.participant, base: S });
   }
+
+  // ------------------------------------------------------------------ start screen (participant ID + session first)
+  var startCtx = null;
+  function sessionLabel(s) {
+    if (!s.participant && !s.condition) return 'Practice (no ID)';
+    return (s.participant || 'no ID') + (s.condition ? ' · ' + s.condition : '');
+  }
+  function fillSessionSuggestions() {
+    var seen = {}, dl = $('sessionSuggestions');
+    var add = function (v) { if (v && !seen[v]) { seen[v] = true; dl.append(el('option', { value: v })); } };
+    dl.replaceChildren();
+    if (S && S.condition) add(S.condition);
+    if (backend) api('sessions').then(function (j) { j.sessions.forEach(function (x) { add(x.condition); }); }).catch(function () {});
+  }
+  /** opts: {saved: unfinished session to offer, cancelable, participant, base: session whose optics/reference carry over} */
+  function openStart(opts) {
+    startCtx = opts;
+    var d = $('startDialog');
+    $('startResumeBox').hidden = !opts.saved;
+    if (opts.saved) $('startResumeText').textContent = 'Unfinished session: ' + sessionLabel(opts.saved) + ', last change ' +
+      new Date(opts.saved.updatedAt).toLocaleString() + ' (' + opts.saved.actions.length + ' actions).';
+    $('startParticipant').value = opts.participant || '';
+    $('startSession').value = '';
+    var L = (opts.base || S).layout, eye = L.leftEye === 'AE' ? 'left' : (L.rightEye === 'AE' ? 'right' : 'unset');
+    document.querySelectorAll('input[name=startEye]').forEach(function (r) { r.checked = r.value === eye; });
+    $('startError').textContent = '';
+    $('startCancel').hidden = !opts.cancelable;
+    fillSessionSuggestions();
+    if (!d.open) d.showModal();
+    setTimeout(function () { (opts.participant ? $('startSession') : $('startParticipant')).focus(); }, 0);
+  }
+  function closeStart() { $('startDialog').close(); startCtx = null; }
+  function beginSession(participant, condition, eye) {
+    var base = (startCtx && startCtx.base) || S;
+    var layout = C.util.clone(base.layout);
+    if (eye === 'left' || eye === 'right') { layout.referenceSide = eye; layout.linked = true; C.eyeRouting(layout); }
+    if (startCtx && startCtx.saved) { try { localStorage.setItem(LS_PREV, JSON.stringify(startCtx.saved)); } catch (e) { /* ignore */ } }
+    var prev = S && !ui.pendingResume ? S.sessionId : (startCtx && startCtx.saved ? startCtx.saved.sessionId : null);
+    if (S && !ui.pendingResume) saveNow();
+    var next = C.newSession({ reference: base.reference, layout: layout, participant: participant, condition: condition });
+    C.log(next, 'session-started', { amblyopicEye: eye, previousSession: prev });
+    ui.pendingResume = false;
+    closeStart();
+    replaceSession(next, participant ? 'Session started: ' + sessionLabel(next) : 'Practice session started (no participant ID).');
+  }
+  $('startForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var pid = $('startParticipant').value.trim(), ses = $('startSession').value.trim();
+    var eye = (document.querySelector('input[name=startEye]:checked') || {}).value || 'unset';
+    if (!pid) { $('startError').textContent = 'Enter a participant ID (or use "Practice without an ID").'; $('startParticipant').focus(); return; }
+    if (!ses) { $('startError').textContent = 'Enter a session name, e.g. "Baseline 1".'; $('startSession').focus(); return; }
+    beginSession(pid, ses, eye);
+  });
+  $('startPractice').addEventListener('click', function () {
+    beginSession('', '', (document.querySelector('input[name=startEye]:checked') || {}).value || 'unset');
+  });
+  $('startResume').addEventListener('click', function () {
+    var saved = startCtx.saved;
+    ui.pendingResume = false; closeStart();
+    S = saved; C.log(S, 'session-resumed', {}); ui.structureKey = null; ui.galleryKey = null; $('refControls').replaceChildren();
+    toast('Continuing ' + sessionLabel(S) + '.'); changed();
+  });
+  $('startCancel').addEventListener('click', closeStart);
+  $('startDialog').addEventListener('cancel', function (e) { if (!startCtx || !startCtx.cancelable) e.preventDefault(); });
   function listSessions() {
     if (!backend) { $('sessionList').textContent = 'Backend not running: only this browser autosave is available.'; return; }
     api('sessions').then(function (j) {
@@ -708,6 +770,7 @@
   }
   function refresh() {
     if (!S) return;
+    $('sessionPill').textContent = ui.pendingResume ? 'No session' : sessionLabel(S);
     $('undo').disabled = !S.undo.length; $('redo').disabled = !S.redo.length;
     $('undo').title = S.undo.length ? 'Undo: ' + S.undo[S.undo.length - 1].label : 'Nothing to undo';
     $('redo').title = S.redo.length ? 'Redo: ' + S.redo[S.redo.length - 1].label : 'Nothing to redo';
@@ -858,17 +921,10 @@
     var saved = null;
     try { var raw = localStorage.getItem(LS_KEY); if (raw) saved = C.validateSession(JSON.parse(raw)); } catch (e) { saved = null; }
     S = C.newSession(saved ? { reference: saved.reference, layout: saved.layout } : {});
-    if (saved && (saved.actions.length > 1 || saved.descriptions.length || saved.accepted.length)) {
-      ui.pendingResume = true;
-      $('resumeBanner').hidden = false;
-      $('resumeText').textContent = 'An unfinished session was found (' + (saved.participant || 'no label') + (saved.condition ? ' · ' + saved.condition : '') +
-        ', last change ' + new Date(saved.updatedAt).toLocaleString() + ', ' + saved.actions.length + ' actions).';
-      $('resumeYes').onclick = function () { ui.pendingResume = false; $('resumeBanner').hidden = true; S = saved; C.log(S, 'session-resumed', {}); ui.structureKey = null; ui.galleryKey = null; changed(); };
-      $('resumeNo').onclick = function () {
-        try { localStorage.setItem(LS_PREV, JSON.stringify(saved)); } catch (e) { /* ignore */ }
-        ui.pendingResume = false; $('resumeBanner').hidden = true; C.log(S, 'session-created-after-declining-resume', { previous: saved.sessionId }); changed();
-      };
-    }
+    // The start screen comes first: participant ID and session (or continue an unfinished session).
+    ui.pendingResume = true;
+    var unfinished = saved && (saved.actions.length > 1 || saved.descriptions.length || saved.accepted.length) ? saved : null;
+    openStart({ saved: unfinished, cancelable: false, participant: unfinished ? unfinished.participant : '', base: saved || S });
     refresh(); broadcast();
     fetch('api/status').then(function (r) { return r.json(); }).then(function (j) {
       backend = !!j.ok; aiStatus = j.ai;

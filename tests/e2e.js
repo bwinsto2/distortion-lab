@@ -48,6 +48,25 @@ function post(port, p, body) {
   await page.goto(URL);
   await page.waitForFunction(() => document.getElementById('backendStatus').textContent === 'Backend connected');
 
+  await step('start screen comes first and requires participant ID and session', async () => {
+    assert(await page.isVisible('#startDialog'), 'start dialog open');
+    assert(!(await page.isVisible('#startCancel')), 'cannot be skipped');
+    await page.click('#startGo');
+    assert((await page.textContent('#startError')).includes('participant ID'));
+    await page.fill('#startParticipant', 'P-E2E');
+    await page.click('#startGo');
+    assert((await page.textContent('#startError')).includes('session'));
+    await page.fill('#startSession', 'Baseline 1');
+    await page.check('input[name=startEye][value=right]');
+    await shot('00-start');
+    await page.click('#startGo');
+    assert(!(await page.isVisible('#startDialog')));
+    const s = await sess();
+    assert(s.participant === 'P-E2E' && s.condition === 'Baseline 1', J([s.participant, s.condition]));
+    assert(s.layout.rightEye === 'AE' && s.layout.leftEye === 'FE' && s.layout.referenceSide === 'right', J(s.layout));
+    assert((await page.textContent('#sessionPill')) === 'P-E2E · Baseline 1');
+  });
+
   await step('page loads, backend connected, mock AI labelled as not AI', async () => {
     assert((await page.textContent('#aiStatus')).includes('not AI'));
     await shot('01-gallery');
@@ -262,9 +281,10 @@ function post(port, p, body) {
     assert(fs.existsSync(path.join(data, 'sessions', s.sessionId + '.json')));
     assert(fs.existsSync(path.join(data, 'distortion-lab.sqlite')));
     await page.reload();
-    await page.waitForSelector('#resumeBanner:not([hidden])');
+    await page.waitForSelector('#startResumeBox:not([hidden])');
+    assert((await page.textContent('#startResumeText')).includes('P-E2E'));
     await shot('07-resume');
-    await page.click('#resumeYes');
+    await page.click('#startResume');
     const r = await sess();
     assert(J(r.work) === J(s.work) && r.undo.length === s.undo.length && r.descriptions.length === s.descriptions.length, 'restored');
     await page.click('#undo');
@@ -308,6 +328,8 @@ function post(port, p, body) {
     const p2 = await ctx.newPage();
     p2.on('pageerror', (e) => errors.push('file:// ' + e.message));
     await p2.goto('file://' + path.join(ROOT, 'web', 'index.html'));
+    await p2.waitForSelector('#startDialog[open]');
+    await p2.click('#startPractice');
     await p2.waitForSelector('#browserOnly:not([hidden])');
     assert((await p2.textContent('#browserOnly')).includes('AI bridge'));
     await p2.click('[data-id="zigzag:mild"]');

@@ -40,7 +40,7 @@ Environment: Linux, Python 3.13.18 and Python 3.9.25 (backend suite run under bo
 | `tools/build_data.py --check` (generated browser data matches `shared/`) | up to date |
 | Python `unittest` (backend, model, AI bridge incl. Claude Code provider via a stand-in CLI, startup/port handling, renderer migration, presentation boundary, parity): 25 tests | **OK** under 3.13 and 3.9 |
 | Node core tests: 26 tests | **26 pass, 0 fail** |
-| Browser end-to-end (Playwright/Chromium against the real backend): 18 steps | **18/18 pass** |
+| Browser end-to-end (Playwright/Chromium against the real backend): 19 steps | **19/19 pass** |
 
 ### What is covered
 
