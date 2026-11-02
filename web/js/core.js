@@ -439,13 +439,14 @@
     str(s.participant, 120, 'participant'); str(s.condition, 120, 'condition'); str(s.notes, 20000, 'notes');
     validateReference(s.reference);
     validateLayout(s.layout);
-    validateWork(s.work);
+    s.work = validateWork(s.work);   // also normalises key order so JSON comparisons are stable
     ['undo', 'redo', 'proposals', 'descriptions', 'accepted', 'actions'].forEach(function (k) {
       if (!Array.isArray(s[k])) fail(k + ' must be an array');
     });
     if (s.undo.length > MAX_UNDO || s.redo.length > MAX_UNDO) fail('Undo/redo history too long');
     if (s.actions.length > 2000000) fail('Action log too long');
-    s.undo.concat(s.redo).forEach(function (e) { plainObject(e, 'history entry'); validateWork(e.work); });
+    s.undo.concat(s.redo).forEach(function (e) { plainObject(e, 'history entry'); e.work = validateWork(e.work); });
+    s.proposals.forEach(function (p) { plainObject(p, 'proposal set'); if (p.base) p.base = validateWork(p.base); });
     s.descriptions.forEach(function (d) { plainObject(d, 'description'); str(d.text, 20000, 'description text'); });
     if (s.outcome !== null) {
       plainObject(s.outcome, 'outcome');

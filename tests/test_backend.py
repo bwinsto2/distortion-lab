@@ -315,3 +315,20 @@ class TestModel(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPresentationBoundary(unittest.TestCase):
+    def test_plan_matches_layout_and_renderer(self):
+        from distortion_lab.presentation import stimulus_plan
+        with open(EXAMPLE, encoding="utf-8") as f:
+            s = json.load(f)
+        s["layout"]["ppd"] = 20
+        plan = stimulus_plan(s, 1000, 600)
+        self.assertEqual(plan["raster_size"], 64)
+        ref = [p for p in plan["panels"] if p["role"] == "reference"][0]
+        self.assertEqual(ref["side"], s["layout"]["referenceSide"])
+        self.assertEqual(ref["centre_px_from_top_left"][0], 1000 * (0.5 - s["layout"]["separation"] / 200.0))
+        lay = s["layout"]
+        self.assertEqual(plan["rasters"]["reconstruction"], M.render_gray(s["work"]["recon"], 64, {"diameter": lay["diameter"], "sigma": lay["sigma"], "aperture": lay["aperture"]}))
+        s["layout"]["visibility"] = "blank"
+        self.assertFalse(any(p["visible"] for p in stimulus_plan(s, 1000, 600)["panels"]))

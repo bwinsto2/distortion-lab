@@ -90,23 +90,24 @@
   window.DistortionLab = Lab;
 
   // ------------------------------------------------------------------ persistence
-  var saveTimer = null, saving = false, saveAgain = false;
+  var saveTimer = null, saveChain = Promise.resolve();
   function scheduleSave() { if (ui.pendingResume) return; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 400); }
   function saveLocal() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(S)); ui.saveState.local = new Date().toISOString(); ui.saveState.localError = null; }
     catch (e) { ui.saveState.localError = e.message; }
   }
+  /** Saves are serialised; the returned promise resolves once the state as of this call is stored. */
   function saveNow() {
     if (ui.pendingResume) return Promise.resolve();
+    clearTimeout(saveTimer);
     saveLocal();
     if (!backend) { updateSaveStatus(); return Promise.resolve(); }
-    if (saving) { saveAgain = true; return Promise.resolve(); }
-    saving = true;
-    return api('sessions/' + encodeURIComponent(S.sessionId), { method: 'PUT', body: S }).then(function (j) {
-      ui.saveState.server = { time: new Date().toISOString(), revision: j.revision }; ui.saveState.error = null;
-    }).catch(function (e) { ui.saveState.error = e.message; }).then(function () {
-      saving = false; updateSaveStatus(); if (saveAgain) { saveAgain = false; return saveNow(); }
+    saveChain = saveChain.then(function () {
+      return api('sessions/' + encodeURIComponent(S.sessionId), { method: 'PUT', body: S }).then(function (j) {
+        ui.saveState.server = { time: new Date().toISOString(), revision: j.revision }; ui.saveState.error = null;
+      }).catch(function (e) { ui.saveState.error = e.message; }).then(updateSaveStatus);
     });
+    return saveChain;
   }
   function updateSaveStatus() {
     var p = $('saveStatus'), st = ui.saveState, parts = [];

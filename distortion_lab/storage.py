@@ -81,7 +81,7 @@ class Storage:
         validate_session(session)
         if session["sessionId"] != sid:
             raise ValidationError("Session id in URL and document differ")
-        data = json.dumps(session, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        data = json.dumps(session, ensure_ascii=False).encode("utf-8")
         digest = hashlib.sha256(data).hexdigest()
         path = self.session_path(sid)
         with _LOCK:
@@ -161,7 +161,7 @@ class Storage:
         manifest = {"schema": "distortion-lab/export/1", "softwareVersion": VERSION, "exportedAt": _now(), "sessionId": sid,
                     "files": files, "note": "PNGs rendered by the Python reference renderer from the saved parameters; "
                     "pixel values are the encoded grey levels before any display gamma."}
-        _atomic_write(os.path.join(out, "session.json"), json.dumps(session, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8"))
+        _atomic_write(os.path.join(out, "session.json"), json.dumps(session, ensure_ascii=False, indent=1).encode("utf-8"))
         _atomic_write(os.path.join(out, "manifest.json"), json.dumps(manifest, indent=1).encode("utf-8"))
         with _LOCK, self._db() as db:
             db.execute("INSERT INTO exports VALUES (?,?,?)", (sid, _now(), out))
