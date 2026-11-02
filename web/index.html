@@ -11,6 +11,7 @@
   <div class="brand"><strong>Distortion Lab</strong> <span id="version" class="muted"></span></div>
   <div class="pills">
     <span id="sessionPill" class="pill" title="Participant and session">No session</span>
+    <span id="stereoPill" class="pill muted" title="Participant controls in the stereoscope">Participant controls off</span>
     <span id="backendStatus" class="pill" title="Backend connection">Backend…</span>
     <span id="aiStatus" class="pill" title="Optional AI bridge">AI…</span>
     <span id="saveStatus" class="pill muted" title="Autosave status">Not saved yet</span>
@@ -195,6 +196,23 @@
 
     <!-- Experimenter -->
     <div class="tab researcher" id="tab-experimenter" hidden>
+      <h3>Participant controls in the stereoscope</h3>
+      <div class="row wrap">
+        <label class="toggle"><input type="checkbox" id="stereoOn"> Participant controls on</label>
+        <span>Eye:</span>
+        <button data-eye="AE">Amblyopic eye</button><button data-eye="FE">Fellow eye + menu</button><button data-eye="both">Both</button>
+        <span id="stereoState" class="muted"></span>
+      </div>
+      <p class="note">When on, the participant switches eyes and adjusts with the knobs and buttons (or the keyboard) while looking into the stereoscope. The amblyopic eye sees the reference; the fellow eye sees the reconstruction with a small menu below it. Keyboard: ← → turn knob (Shift = ×5) · ↑ ↓ choose control · Enter = press knob · Space = switch eye · M = Adjust/Compare · N = new alternatives · Z = undo. Keys work in this window (outside text boxes) and in the stimulus window.</p>
+      <div class="row wrap">
+        <button id="midiConnect">Connect MIDI controller</button>
+        <button id="midiLearn" disabled>Set up buttons and knobs…</button>
+        <span id="midiStatus" class="muted">No controller connected</span>
+      </div>
+      <div id="midiLearnBox" class="resume-box" hidden>
+        <p id="midiLearnText"></p>
+        <div class="row"><button id="midiLearnSkip" class="small">Skip this one</button><button id="midiLearnCancel" class="small">Cancel</button></div>
+      </div>
       <h3>Session</h3>
       <div class="form">
         <label>Participant label (pseudonym) <input id="participant" maxlength="120" placeholder="e.g. P-07"></label>
@@ -278,6 +296,7 @@
 <script src="js/data.js"></script>
 <script src="js/core.js"></script>
 <script src="js/draw.js"></script>
+<script src="js/controller.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

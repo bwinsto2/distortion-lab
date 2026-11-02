@@ -5,7 +5,7 @@
  */
 (function () {
   'use strict';
-  var C = window.DLCore, D = window.DLDraw;
+  var C = window.DLCore, D = window.DLDraw, K = window.DLController;
   var $ = function (id) { return document.getElementById(id); };
   var LS_KEY = 'distortion-lab:v2:autosave', LS_PREV = 'distortion-lab:v2:previous';
   var DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -13,7 +13,8 @@
   var backend = false, aiStatus = { provider: 'none', connected: false, label: 'AI off', detail: '' };
   var ui = { tab: 'gallery', selectedComponent: null, multi: false, multiSel: [], comboSet: null, currentSet: null, marking: false,
     region: null, structureKey: null, galleryKey: null, seqStart: Date.now(), stimWin: null, display: null, pendingResume: false,
-    preview: null, descContext: 'still-different', saveState: { local: null, server: null, error: null }, lastDesc: null, aiSet: null };
+    preview: null, stereo: { on: false, eye: 'AE', mode: 'adjust', ctl: 0, status: '', statusUntil: 0 },
+    descContext: 'still-different', saveState: { local: null, server: null, error: null }, lastDesc: null, aiSet: null };
   var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('distortion-lab-v2') : null;
 
   // ------------------------------------------------------------------ helpers
@@ -85,7 +86,12 @@
     reconPNG: function (n) { return D.singlePNG(S.work.recon, n || 512, geom()); },
     referencePNG: function (n) { return D.singlePNG(C.referenceRecon(S.reference), n || 512, geom()); },
     saveNow: function () { return saveNow(); },
-    status: function () { return { backend: backend, ai: aiStatus, save: ui.saveState }; }
+    status: function () { return { backend: backend, ai: aiStatus, save: ui.saveState }; },
+    participantControls: function (on) { setStereo(!!on); },
+    controllerAction: function (action, steps) { return stereoAction(action, steps === undefined ? 1 : steps, 'api'); },
+    midiMessage: function (bytes) { midiMessage(bytes); },
+    startControllerSetup: function () { startLearn(); },
+    stereoState: function () { return C.util.clone(ui.stereo); }
   };
   window.DistortionLab = Lab;
 
@@ -136,9 +142,10 @@
     refresh(); broadcast(); scheduleSave();
   }
   function stimMessage() {
-    var pv = previewInfo();
-    var recon = pv && $('previewOnStim').checked ? pv.cand.recon : S.work.recon;
-    return { type: 'state', reference: S.reference, recon: recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId, previewing: !!(pv && $('previewOnStim').checked) };
+    var pv = previewInfo(), showPv = pv && (ui.stereo.on || $('previewOnStim').checked);
+    var recon = showPv ? pv.cand.recon : S.work.recon;
+    return { type: 'state', reference: S.reference, recon: recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId, previewing: !!showPv,
+      view: ui.stereo.on ? { eye: ui.stereo.eye, overlay: stereoOverlay() } : null };
   }
   function broadcast() {
     if (!S) return;
@@ -150,6 +157,7 @@
     if (!m || typeof m !== 'object') return;
     if (m.type === 'hello') broadcast();
     if (m.type === 'display' && typeof m.w === 'number') { ui.display = { w: m.w, h: m.h, dpr: m.dpr, fullscreen: !!m.fullscreen }; drawPreview(); }
+    if (m.type === 'key' && typeof m.key === 'string') { var a = K.keyAction(m.key, !!m.shift); if (a) stereoAction(a.action, a.steps, 'keyboard'); }
   }
   if (bc) bc.onmessage = function (e) { onStimMessage(e.data); };
   window.addEventListener('message', function (e) { if (e.source === ui.stimWin) onStimMessage(e.data); });
@@ -181,7 +189,8 @@
     c.style.aspectRatio = disp.w + ' / ' + disp.h;
     var W = Math.round(cssW * DPR), H = Math.round(cssH * DPR);
     if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
-    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: stimMessage().recon, layout: S.layout },
+    var sm = stimMessage();
+    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: sm.recon, layout: S.layout, view: sm.view },
       { scale: cssW / disp.w, labels: true, now: Date.now(), timing: { seqStart: ui.seqStart } });
     // Warnings are evaluated at full stimulus-window scale.
     var n = Math.max(8, Math.min(2048, Math.ceil(S.layout.diameter * S.layout.ppd * ((ui.display && ui.display.dpr) || 1))));
@@ -532,6 +541,7 @@
         poolSeed: poolSeed, rejectedCount: (j.rejectedSets || []).length }); });
       if (set) {
         ui.currentSet = set.id; switchTab('alternatives');
+        if (ui.stereo.on) { ui.stereo.mode = 'compare'; stereoFlash(list.length ? list.length + ' new suggestions' : 'No matching suggestions'); broadcast(); }
         toast(list.length ? list.length + ' suggestion(s), picked after looking at ' + j.considered + ' rendered candidates. Choose one or keep current.'
           : 'None of the candidates matched. See the note above the pictures.', 6000);
       }
@@ -759,6 +769,170 @@
     S.actions.slice(-80).reverse().forEach(function (x) { l.append(el('div', { text: time(x.time) + ' ' + x.type + (x.label ? ' · ' + x.label : '') + (x.path ? ' · ' + x.path : '') })); });
   }
 
+  // ------------------------------------------------------------------ participant controls in the stereoscope
+  /** Controls the participant can step through: the same ones shown in the Adjust tab. */
+  function stereoControls() {
+    var r = S.work.recon, st = S.settings, out = [];
+    if (r.renderer === 'semantic-grating') {
+      var fams = C.relevantFamilies(r, st.revealedFamilies);
+      C.DATA.parameters.renderers['semantic-grating'].params.forEach(function (d) {
+        if (fams.indexOf(d.family) >= 0 && (!d.advanced || st.includeAdvanced)) out.push({ path: d.key, def: d, label: d.label });
+      });
+    } else {
+      var en = {};
+      r.params.components.forEach(function (c) { if (c.enabled) en['c' + c.id] = true; });
+      C.paramList(r).forEach(function (e) {
+        if (e.def.type === 'number' && (e.family === 'output' || en[e.family])) out.push({ path: e.path, def: e.def, label: C.labelFor(r, e.path) });
+      });
+    }
+    return out;
+  }
+  function stereoSet() {
+    var rec = ui.currentSet && S.proposals.filter(function (p) { return p.id === ui.currentSet; })[0];
+    return rec && rec.candidates.length && C.canChoose(S, rec.id) ? rec : null;
+  }
+  function stereoOverlay() {
+    var st = ui.stereo, o = { title: st.mode === 'adjust' ? 'ADJUST' : 'COMPARE', lines: [], status: Date.now() < st.statusUntil ? st.status : '' };
+    if (st.mode === 'adjust') {
+      var list = stereoControls();
+      if (!list.length) { o.lines.push({ text: 'Nothing to adjust' }); return o; }
+      st.ctl = ((st.ctl % list.length) + list.length) % list.length;
+      var cur = list[st.ctl], prev = list.length > 2 ? list[(st.ctl - 1 + list.length) % list.length] : null, next = list.length > 1 ? list[(st.ctl + 1) % list.length] : null;
+      var v = C.getValue(S.work.recon, cur.path), pinned = S.work.pins.indexOf(cur.path) >= 0;
+      if (prev) o.lines.push({ text: prev.label, faint: true });
+      var line = { text: cur.label + (pinned ? ' (fixed)' : ''), strong: true };
+      if (cur.def.type === 'number') line.bar = (v - cur.def.min) / (cur.def.max - cur.def.min);
+      else line.text += ': ' + ((cur.def.choiceLabels || {})[v] || v);
+      o.lines.push(line);
+      if (next) o.lines.push({ text: next.label, faint: true });
+    } else {
+      var rec = stereoSet();
+      if (!rec) { o.lines.push({ text: 'Press "New alternatives" to see other versions' }); return o; }
+      var pv = previewInfo();
+      o.lines.push({ text: pv && pv.rec.id === rec.id ? 'Version ' + pv.letter + ' of ' + rec.candidates.length : 'Current version', strong: true });
+      o.lines.push({ text: 'Turn to look through ' + rec.candidates.length + ' versions · press to choose', faint: true });
+    }
+    return o;
+  }
+  function stereoFlash(msg) {
+    ui.stereo.status = msg; ui.stereo.statusUntil = Date.now() + 2200;
+    clearTimeout(stereoFlash.t); stereoFlash.t = setTimeout(function () { broadcast(); drawPreview(); }, 2300);
+  }
+  /** One controller action from a knob/button (MIDI), the keyboard, or the stimulus window. */
+  function stereoAction(action, steps, source) {
+    var st = ui.stereo;
+    if (!st.on || !S || ui.pendingResume) return false;
+    var sign = steps < 0 ? -1 : 1;
+    if (action === 'eye') { st.eye = st.eye === 'AE' ? 'FE' : 'AE'; }
+    else if (action === 'mode') { st.mode = st.mode === 'adjust' ? 'compare' : 'adjust'; if (st.mode === 'adjust') ui.preview = null; }
+    else if (action === 'select') { st.ctl += sign; }
+    else if (action === 'value') {
+      if (st.eye === 'AE') stereoFlash('Switch to the fellow eye to adjust');
+      else if (st.mode === 'adjust') {
+        var list = stereoControls(), cur = list.length ? list[((st.ctl % list.length) + list.length) % list.length] : null;
+        if (!cur) { /* nothing */ }
+        else if (S.work.pins.indexOf(cur.path) >= 0) stereoFlash('This one is fixed');
+        else if (cur.def.type === 'enum') {
+          var ch = cur.def.choices, i = ch.indexOf(C.getValue(S.work.recon, cur.path));
+          Lab.set(cur.path, ch[(i + sign + ch.length) % ch.length], { source: source, quiet: true });
+        } else act(function () { return C.nudge(S, cur.path, steps, { source: source }); }, true);
+      } else if (stereoSet()) cyclePreview(sign);
+      else stereoFlash('Press "New alternatives" first');
+    } else if (action === 'press') {
+      if (st.mode === 'adjust') st.ctl += 1;
+      else {
+        var pv = previewInfo();
+        if (pv && pv.choosable) { ui.preview = null; if (Lab.choose(pv.rec.id, pv.cand.id)) stereoFlash('Chosen'); }
+        else stereoFlash(stereoSet() ? 'This is the current version' : 'Press "New alternatives" first');
+      }
+    } else if (action === 'alts') {
+      var rec = Lab.requestAlternatives({ repeat: true });
+      st.mode = 'compare';
+      stereoFlash(rec && rec.candidates.length ? rec.candidates.length + ' new versions' : ((rec && rec.reason) || 'No other versions available'));
+    } else if (action === 'undo') { ui.preview = null; Lab.undo(); stereoFlash('Undone'); }
+    else return false;
+    refresh(); broadcast();
+    return true;
+  }
+  function setStereo(on) {
+    ui.stereo.on = on;
+    if (on) { ui.stereo.eye = 'AE'; ui.stereo.mode = 'adjust'; ui.preview = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    C.log(S, 'participant-controls', { on: on });
+    refresh(); broadcast(); scheduleSave();
+  }
+  function syncStereo() {
+    var st = ui.stereo;
+    $('stereoOn').checked = st.on;
+    $('stereoPill').textContent = st.on ? 'Participant controls: ' + (st.eye === 'AE' ? 'amblyopic eye' : st.eye === 'FE' ? 'fellow eye' : 'both eyes') + ' · ' + st.mode : 'Participant controls off';
+    $('stereoPill').className = 'pill ' + (st.on ? 'ok' : 'muted');
+    document.querySelectorAll('[data-eye]').forEach(function (b) { b.setAttribute('aria-pressed', String(st.on && b.dataset.eye === st.eye)); b.disabled = !st.on; });
+    $('stereoState').textContent = st.on ? 'Mode: ' + st.mode : '';
+  }
+
+  // ---- MIDI controller (Web MIDI; Chrome/Chromium)
+  var MIDI_KEY = 'distortion-lab:midi-map';
+  var midi = { access: null, inputs: [], mapping: null, memo: {}, learn: null };
+  try { midi.mapping = JSON.parse(localStorage.getItem(MIDI_KEY) || 'null'); } catch (e) { midi.mapping = null; }
+  function midiStatus() {
+    var n = midi.mapping ? Object.keys(midi.mapping).length : 0;
+    $('midiStatus').textContent = !midi.access ? (n ? 'Saved setup for ' + n + ' controls; press Connect' : 'No controller connected')
+      : (midi.inputs.length ? 'Connected: ' + midi.inputs.join(', ') + (n ? ' · ' + n + ' controls set up' : ' · not set up yet') : 'MIDI available, but no controller is plugged in');
+    $('midiLearn').disabled = !midi.access || !midi.inputs.length;
+  }
+  function midiAttach() {
+    midi.inputs = [];
+    midi.access.inputs.forEach(function (inp) {
+      inp.onmidimessage = function (ev) { midiMessage(Array.prototype.slice.call(ev.data)); };
+      midi.inputs.push(inp.name || 'MIDI input');
+    });
+    midiStatus();
+  }
+  function midiConnect(silent) {
+    if (!navigator.requestMIDIAccess) { if (!silent) $('midiStatus').textContent = 'This browser has no MIDI support. Use Chrome or Chromium.'; return; }
+    navigator.requestMIDIAccess().then(function (acc) { midi.access = acc; acc.onstatechange = midiAttach; midiAttach(); },
+      function (e) { if (!silent) $('midiStatus').textContent = 'MIDI access was refused (' + e.message + '). Allow MIDI for this page in the browser settings.'; });
+  }
+  function midiMessage(bytes) {
+    var m = K.parse(bytes);
+    if (midi.learn) { learnFeed(m); return; }
+    K.decode(midi.mapping, m, midi.memo).forEach(function (a) { stereoAction(a.action, a.steps, 'midi'); });
+  }
+  function learnPrompt() {
+    var L = midi.learn, a = K.ACTIONS[L.i];
+    $('midiLearnBox').hidden = false;
+    $('midiLearnText').textContent = 'Step ' + (L.i + 1) + ' of ' + K.ACTIONS.length + ': ' + a.label + (L.msg ? ' — ' + L.msg : '');
+  }
+  function learnNext() {
+    var L = midi.learn;
+    L.i++; L.buf = []; L.msg = '';
+    if (L.i >= K.ACTIONS.length) {
+      midi.mapping = L.map; midi.memo = {};
+      try { localStorage.setItem(MIDI_KEY, JSON.stringify(midi.mapping)); } catch (e) { /* ignore */ }
+      midi.learn = null; $('midiLearnBox').hidden = true;
+      C.log(S, 'controller-setup', { controls: Object.keys(midi.mapping) });
+      toast('Controller set up. Turn on participant controls to use it.');
+      midiStatus(); return;
+    }
+    learnPrompt();
+  }
+  function learnFeed(m) {
+    var L = midi.learn, a = K.ACTIONS[L.i];
+    if (a.kind === 'press') {
+      var b = K.learnPress(m);
+      if (b) { L.map[a.id] = b; learnNext(); }
+      return;
+    }
+    if (m.type !== 'cc') return;
+    L.buf.push(m);
+    clearTimeout(L.timer);
+    L.timer = setTimeout(function () {
+      var b = K.learnTurn(L.buf);
+      if (b) { L.map[a.id] = b; learnNext(); }
+      else { L.buf = []; L.msg = 'did not catch that, please turn it again'; learnPrompt(); }
+    }, 1500);
+  }
+  function startLearn() { midi.learn = { i: 0, buf: [], map: {}, msg: '' }; learnPrompt(); }
+
   // ------------------------------------------------------------------ tabs, refresh
   function switchTab(t) {
     if (t !== ui.tab && ui.preview) { ui.preview = null; broadcast(); }
@@ -771,6 +945,7 @@
   function refresh() {
     if (!S) return;
     $('sessionPill').textContent = ui.pendingResume ? 'No session' : sessionLabel(S);
+    syncStereo();
     $('undo').disabled = !S.undo.length; $('redo').disabled = !S.redo.length;
     $('undo').title = S.undo.length ? 'Undo: ' + S.undo[S.undo.length - 1].label : 'Nothing to undo';
     $('redo').title = S.redo.length ? 'Redo: ' + S.redo[S.redo.length - 1].label : 'Nothing to redo';
@@ -823,6 +998,12 @@
   $('showAdvanced').addEventListener('change', function (e) { S.settings.includeAdvanced = e.target.checked; ui.structureKey = null; refresh(); scheduleSave(); });
   $('shrink').addEventListener('change', function (e) { S.settings.shrinkRepeated = e.target.checked; scheduleSave(); });
   $('showLabels').addEventListener('change', function (e) { S.settings.showLabels = e.target.checked; refresh(); scheduleSave(); });
+  $('stereoOn').addEventListener('change', function (e) { setStereo(e.target.checked); });
+  document.querySelectorAll('[data-eye]').forEach(function (b) { b.addEventListener('click', function () { ui.stereo.eye = b.dataset.eye; refresh(); broadcast(); }); });
+  $('midiConnect').addEventListener('click', function () { midiConnect(false); });
+  $('midiLearn').addEventListener('click', startLearn);
+  $('midiLearnSkip').addEventListener('click', function () { if (midi.learn) learnNext(); });
+  $('midiLearnCancel').addEventListener('click', function () { midi.learn = null; $('midiLearnBox').hidden = true; });
   $('bigCands').addEventListener('change', function (e) { S.settings.bigCandidates = e.target.checked; refresh(); scheduleSave(); });
   $('previewOnStim').addEventListener('change', function () { broadcast(); });
   $('previewBack').addEventListener('click', function () { setPreview(null, null); });
@@ -887,6 +1068,10 @@
     var t = e.target;
     if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && (t.type === 'text' || !t.type))) return;
     var mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
+    if (ui.stereo.on && !mod && !e.altKey && t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && !$('startDialog').open) {
+      var ka = K.keyAction(e.key, e.shiftKey);
+      if (ka) { e.preventDefault(); stereoAction(ka.action, ka.steps, 'keyboard'); return; }
+    }
     if (ui.tab === 'alternatives' && !mod && t.tagName !== 'SELECT' && t.tagName !== 'INPUT') {
       if (e.key === 'ArrowRight') { e.preventDefault(); cyclePreview(1); return; }
       if (e.key === 'ArrowLeft') { e.preventDefault(); cyclePreview(-1); return; }
@@ -926,6 +1111,8 @@
     var unfinished = saved && (saved.actions.length > 1 || saved.descriptions.length || saved.accepted.length) ? saved : null;
     openStart({ saved: unfinished, cancelable: false, participant: unfinished ? unfinished.participant : '', base: saved || S });
     refresh(); broadcast();
+    if (midi.mapping) midiConnect(true);
+    midiStatus();
     fetch('api/status').then(function (r) { return r.json(); }).then(function (j) {
       backend = !!j.ok; aiStatus = j.ai;
       $('backendStatus').textContent = 'Backend connected'; $('backendStatus').className = 'pill ok'; $('backendStatus').title = 'Data folder: ' + j.dataDir + ' · Python ' + j.python;

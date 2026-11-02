@@ -55,7 +55,12 @@
     var geom = geomOf(L);
     var centers = { left: [W * (0.5 - L.separation / 200), H / 2], right: [W * (0.5 + L.separation / 200), H / 2 + L.vertical * scale] };
     var roles = {}, info = { n: n, diameterCss: dCss, showing: null, roles: roles };
-    if (L.comparison === 'simultaneous') {
+    var view = state.view || null;          // participant controls: {eye: 'AE'|'FE'|'both', overlay}
+    var aeSide = L.referenceSide, feSide = aeSide === 'left' ? 'right' : 'left';
+    if (view) {
+      if (view.eye === 'AE' || view.eye === 'both') roles[aeSide] = 'reference';
+      if (view.eye === 'FE' || view.eye === 'both') roles[feSide] = 'reconstruction';
+    } else if (L.comparison === 'simultaneous') {
       roles[L.referenceSide] = 'reference';
       roles[L.referenceSide === 'left' ? 'right' : 'left'] = 'reconstruction';
     } else {
@@ -64,7 +69,7 @@
     }
     ['left', 'right'].forEach(function (side) {
       var role = roles[side];
-      var visible = role && (L.visibility === 'both' || L.visibility === side);
+      var visible = role && (view ? true : (L.visibility === 'both' || L.visibility === side));
       var x = centers[side][0], y = centers[side][1];
       if (visible) {
         var img = role === 'reference' ? referenceCanvas(state.reference, n, geom) : rasterCanvas(state.recon, n, geom);
@@ -80,8 +85,36 @@
         ctx.fillText(side + (role ? ' · ' + role : ' · empty') + (eye !== 'unassigned' ? ' · ' + eye : '') + (visible ? '' : ' (hidden)'), x, Math.min(H - 4, y + dCss / 2 + 13));
       }
     });
+    if (view && view.overlay && (view.eye === 'FE' || view.eye === 'both'))
+      drawOverlay(ctx, centers[feSide][0], centers[feSide][1], dCss / 2, Math.max(9, Math.min(30, 0.17 * L.ppd * scale)), view.overlay);
     info.warnings = warnings(state, W / scale, H / scale, n, centers, dCss / scale);
     return info;
+  }
+
+  /**
+   * In-stereoscope menu, drawn around (never over) the fellow-eye stimulus in dim grey.
+   * overlay: {title, lines: [{text, faint, strong, bar: 0..1}], status}
+   */
+  function drawOverlay(ctx, x, y, r, fs, ov) {
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    var dim = 'rgb(72,72,72)', faint = 'rgb(88,88,88)', strong = 'rgb(40,40,40)';
+    if (ov.title) { ctx.font = '600 ' + Math.round(fs * 0.85) + 'px sans-serif'; ctx.fillStyle = dim; ctx.fillText(ov.title, x, y - r - fs * 0.9); }
+    var ty = y + r + fs * 1.6;
+    (ov.lines || []).forEach(function (l) {
+      ctx.font = (l.strong ? '600 ' : '') + Math.round(l.faint ? fs * 0.85 : fs) + 'px sans-serif';
+      ctx.fillStyle = l.faint ? faint : (l.strong ? strong : dim);
+      ctx.fillText(l.text, x, ty);
+      if (typeof l.bar === 'number') {
+        var w = Math.max(r * 1.6, 60), h = Math.max(4, fs * 0.35), bx = x - w / 2, by = ty + fs * 0.45;
+        ctx.strokeStyle = dim; ctx.lineWidth = 1; ctx.strokeRect(bx, by, w, h);
+        ctx.fillStyle = dim; ctx.fillRect(bx, by, w * Math.max(0, Math.min(1, l.bar)), h);
+        ty += h + fs * 0.6;
+      }
+      ty += fs * 1.35;
+    });
+    if (ov.status) { ctx.font = '600 ' + Math.round(fs) + 'px sans-serif'; ctx.fillStyle = strong; ctx.fillText(ov.status, x, ty + fs * 0.3); }
+    ctx.restore();
   }
 
   function warnings(state, W, H, n, centers, d) {

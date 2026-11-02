@@ -13,10 +13,17 @@
   function accept(m) {
     if (!m || m.type !== 'state') return;
     try {
-      state = { reference: C.validateReference(m.reference), recon: C.validateRecon(m.recon), layout: C.validateLayout(m.layout), seqStart: m.seqStart || 0 };
+      state = { reference: C.validateReference(m.reference), recon: C.validateRecon(m.recon), layout: C.validateLayout(m.layout), seqStart: m.seqStart || 0,
+        view: sanitizeView(m.view) };
       document.getElementById('status').textContent = 'linked · ' + state.recon.renderer + ' · session ' + String(m.sessionId).slice(0, 8);
     } catch (e) { document.getElementById('status').textContent = 'rejected invalid state: ' + e.message; return; }
     request();
+  }
+  function sanitizeView(v) {
+    if (!v || typeof v !== 'object' || ['AE', 'FE', 'both'].indexOf(v.eye) < 0) return null;
+    var o = v.overlay && typeof v.overlay === 'object' ? v.overlay : null, str = function (t) { return typeof t === 'string' ? t.slice(0, 80) : ''; };
+    return { eye: v.eye, overlay: o ? { title: str(o.title), status: str(o.status), lines: (Array.isArray(o.lines) ? o.lines.slice(0, 6) : []).map(function (l) {
+      return { text: str(l && l.text), faint: !!(l && l.faint), strong: !!(l && l.strong), bar: l && typeof l.bar === 'number' ? l.bar : undefined }; }) } : null };
   }
   if (bc) bc.onmessage = function (e) { accept(e.data); };
   window.addEventListener('message', function (e) { accept(e.data); });
@@ -40,8 +47,13 @@
   }
   document.getElementById('present').addEventListener('click', function () { present(true); });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'f' || e.key === 'F') present(!document.body.classList.contains('present'));
-    if (e.key === 'Escape') present(false);
+    if (e.key === 'f' || e.key === 'F') { present(!document.body.classList.contains('present')); return; }
+    if (e.key === 'Escape') { present(false); return; }
+    // Participant controls typed in this window are forwarded to the console, which owns the state.
+    if (state && state.view && window.DLController && DLController.keyAction(e.key, e.shiftKey)) {
+      e.preventDefault();
+      send({ type: 'key', key: e.key, shift: e.shiftKey });
+    }
   });
   document.addEventListener('fullscreenchange', function () { if (!document.fullscreenElement) document.body.classList.remove('present'); report(); request(); });
   document.addEventListener('mousemove', function () {

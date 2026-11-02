@@ -28,6 +28,8 @@ session records the software version it was made with.
 **macOS:** in Finder, open the `distortion-lab` folder in your home folder and double-click **`Distortion Lab.command`**,
 or **`Distortion Lab (with Claude).command`** for AI suggestions through your Claude plan
 (one-time setup in [docs/AI_BRIDGE.md](docs/AI_BRIDGE.md)). The first time, right-click → Open to approve it.
+**Linux:** run `sh tools/install_linux_launcher.sh` once to add *Distortion Lab* and *Distortion Lab (with Claude)*
+to the applications menu and desktop, or run `./start.sh` / `./start-with-claude.sh`.
 **Any system:**
 
 ```bash
@@ -90,6 +92,11 @@ gallery choices, combinations, mixing, pins and component edits.
 presentation. It draws exactly what the console sends and has no controls. Screen position does not isolate the eyes;
 the stereoscope does.
 
+**Participant controls in the stereoscope** (Experimenter tab): participants switch between amblyopic-eye and
+fellow-eye views with a button. They adjust or compare with a USB MIDI controller (knobs and buttons) or the keyboard,
+using a small menu drawn in the fellow-eye half below the reconstruction. Lab setup with a Linux desktop, two monitors
+and the controller: [docs/SETUP.md](docs/SETUP.md).
+
 ## Data, persistence and privacy
 
 - **Autosave.** Every change is saved to the browser's local storage and, when the backend is running, to
@@ -108,6 +115,7 @@ the stereoscope does.
 
 | | |
 |---|---|
+| [docs/SETUP.md](docs/SETUP.md) | lab setup: Linux desktop, two monitors, mirror stereoscope, MIDI knobs and buttons, keyboard keys |
 | [docs/MODEL.md](docs/MODEL.md) | equations for both renderers, proposals, pins, provenance and **limitations** |
 | [docs/PARAMETERS.md](docs/PARAMETERS.md) | every control: range, steps, proposal size, default |
 | [docs/API.md](docs/API.md) | controller API (mouse = keyboard = dials = scripts), backend endpoints, dial relay, session format, dev requests |

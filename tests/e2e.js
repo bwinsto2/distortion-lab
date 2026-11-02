@@ -273,6 +273,67 @@ function post(port, p, body) {
     await stim.close();
   });
 
+  await step('participant controls: eye switching, in-stereoscope menu, keyboard and simulated MIDI controller', async () => {
+    await page.evaluate(() => { DistortionLab.unpin('bendAmount'); DistortionLab.chooseGallery('zigzag:mild'); });
+    const stim = await ctx.newPage();
+    await stim.goto(URL + 'stimulus.html');
+    await stim.waitForFunction(() => window.DistortionLabStimulus.getState() !== null);
+    await page.click('[data-tab=experimenter]');
+    await page.check('#stereoOn');
+    const view = () => stim.evaluate(() => DistortionLabStimulus.getState().view);
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view && DistortionLabStimulus.getState().view.eye === 'AE');
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.keyboard.press('Space');
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'FE');
+    let v = await view();
+    assert(v.overlay.title === 'ADJUST' && v.overlay.lines.some((l) => l.strong), J(v.overlay));
+    const o0 = (await work()).recon.params.orientation;
+    await page.keyboard.press('ArrowRight');
+    assert(Math.abs((await work()).recon.params.orientation - (o0 + 0.1)) < 1e-9, 'knob turn changes the highlighted control');
+    await page.keyboard.press('ArrowDown');
+    const f0 = (await work()).recon.params.frequency;
+    await page.keyboard.press('Shift+ArrowRight');
+    assert(Math.abs((await work()).recon.params.frequency - (f0 + 0.05)) < 1e-9, 'second control, coarse turn');
+    await page.keyboard.press('m');
+    await page.keyboard.press('n');
+    const s = await sess(), set = s.proposals[s.proposals.length - 1];
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.overlay.title === 'COMPARE');
+    await page.keyboard.press('ArrowRight');
+    await stim.waitForFunction((r) => JSON.stringify(DistortionLabStimulus.getState().recon) === r, J(set.candidates[0].recon));
+    v = await view();
+    assert(v.overlay.lines[0].text.startsWith('Version A'), J(v.overlay));
+    if (SHOTS) await stim.screenshot({ path: path.join(SHOTS, '10-stereoscope-menu.png') });
+    const before = J((await work()).recon);
+    await page.keyboard.press('Enter');
+    assert(J((await work()).recon) === J(set.candidates[0].recon), 'press chooses the version shown');
+    await page.keyboard.press('z');
+    assert(J((await work()).recon) === before, 'undo button');
+    await stim.keyboard.press('Space');                       // keys typed in the stimulus window reach the console
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'AE');
+    // Simulated MIDI controller: learn, then use
+    await page.evaluate(() => DistortionLab.startControllerSetup());
+    const midiSend = (bytes) => page.evaluate((b) => DistortionLab.midiMessage(b), bytes);
+    for (const val of [1, 1, 2, 65, 65, 66]) await midiSend([0xB0, 16, val]);
+    await sleep(1700);
+    for (const n of [32, 89, 90, 91, 92]) await midiSend([0x90, n, 127]);
+    await page.click('#midiLearnSkip');                        // optional second knob
+    assert(await page.isHidden('#midiLearnBox'), 'setup finished');
+    await midiSend([0x90, 89, 127]);                           // eye button
+    assert((await page.evaluate(() => DistortionLab.stereoState().eye)) === 'FE');
+    await midiSend([0x90, 90, 127]);                           // mode -> adjust
+    const st = await page.evaluate(() => DistortionLab.stereoState());
+    assert(st.mode === 'adjust', J(st));
+    const w0 = await work();
+    await midiSend([0xB0, 16, 2]);                             // knob +2 clicks
+    const w1 = await work();
+    assert(J(w1.recon) !== J(w0.recon), 'MIDI knob changed a value');
+    await midiSend([0xB0, 16, 66]);                            // knob -2 clicks
+    assert(J((await work()).recon) === J(w0.recon), 'turning back restores the value');
+    await page.uncheck('#stereoOn');
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view === null);
+    await stim.close();
+  });
+
   await step('autosave to server and browser; reload offers resume and restores exact state', async () => {
     await page.evaluate(() => DistortionLab.saveNow());
     const s = await sess();

@@ -7,7 +7,7 @@ echo "== Python backend, model and parity tests"
 python3 -m unittest discover -s tests -v
 if command -v node >/dev/null 2>&1; then
   echo "== Browser core tests (Node)"
-  node --test tests/core.test.js
+  node --test tests/core.test.js tests/controller.test.js
   echo "== Browser end-to-end tests (Playwright, skipped if not installed)"
   node tests/e2e.js
 else
