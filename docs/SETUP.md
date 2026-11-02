@@ -41,6 +41,16 @@ isn't the default browser, start it from a terminal with `BROWSER=google-chrome 
 |---|---|---|
 | **Amblyopic eye** view | reference grating | plain mid-grey |
 | **Fellow eye** view | plain mid-grey | reconstruction, with a small dim menu below it (never over the grating) |
+| **Both** | reference grating | reconstruction (or, in Choose, the ring of options around an empty centre where the test grating fuses) |
+
+The **Switch eye** button cycles amblyopic → fellow → both. Participant controls start in **Choose** with both eyes.
+
+- **Choose mode (first step):** 8 starting pictures are shown in a ring in the fellow-eye half, around an empty centre.
+  With both eyes, the amblyopic eye's test grating appears in that centre, so each option can be compared with it
+  directly, as in Maruya et al.'s dichoptic display. Turning moves the highlight clockwise and onto the next page of 8
+  after the last one (the second knob or ↑/↓ jumps a page). Pressing chooses and moves on to Adjust. The library is
+  ordered: unchanged grating, the 7 plaid types, the feature families (mild and strong), combinations, then
+  **None of these**, which records that response and sends the researcher to the description tab.
 
 Blank halves stay at the same mid-grey as the background, so switching doesn't cause flashes.
 
@@ -56,8 +66,8 @@ Blank halves stay at the same mid-grey as the background, so switching doesn't c
 |---|---|
 | Main knob, turn | change the value (Adjust) / flip through versions (Compare) |
 | Main knob, press | next control (Adjust) / choose (Compare) |
-| Button | Switch eye |
-| Button | Adjust ↔ Compare |
+| Button | Switch eye: amblyopic → fellow → both |
+| Button | Mode: Choose → Adjust → Compare |
 | Button | New alternatives |
 | Button | Undo |
 | Optional second knob | choose which control (Adjust) |
@@ -68,14 +78,14 @@ computer. For the X-Touch Mini, use its **MC mode** (the "MC" button), where the
 
 **Mouse** (no extra hardware): in the stimulus window, scroll = knob (Shift+scroll = 5 clicks), left click = press,
 **hold** left button about 1 s = new alternatives, right click = switch eye, middle click (press the wheel) =
-Adjust/Compare, side "back" button = undo, side "forward" button = new alternatives. The first click locks the pointer
+next mode (Choose / Adjust / Compare), side "back" button = undo, side "forward" button = new alternatives. The first click locks the pointer
 to the stimulus window (it's hidden) so the wheel keeps working. **Esc** releases it. Note that the computer has one
 pointer: while it's locked, the researcher must press Esc before using the console with the mouse (a second mouse
 moves the same pointer). The MIDI controller doesn't have this limitation.
 
 **Keyboard** (works in the console outside text boxes, and in the stimulus window):
 ← → turn the knob (Shift = 5 clicks) · ↑ ↓ choose control · Enter = press knob · Space = switch eye ·
-M = Adjust/Compare · N = new alternatives · Z = undo.
+M = mode (Choose / Adjust / Compare) · N = new alternatives · Z = undo.
 
 ## The researcher's part (console)
 

@@ -52,7 +52,8 @@ dials. In this mode, autosave goes only to the browser's local storage.
    amblyopic eye, which sets the routing: reference on the amblyopic eye's side. It also offers to continue an
    unfinished session. *Practice without an ID* is available for demonstrations.
 
-1. **Choose.** A gallery of thumbnails rendered from the current reference grating: unchanged reference, tilted, wavy,
+1. **Choose.** A gallery of thumbnails rendered from the current reference grating: unchanged reference, the 7 two-grating
+   **plaid** types described by Maruya et al. (2025 preprint; our approximations), tilted, wavy,
    zigzag, stepped, offset, broken, crossing lines, round gap, missing band and branching gap, each mild and strong, plus
    combinations. Participants pick the closest one. **More than one of these** lets them pick two features and see
    four combinations (each mild/strong pairing). They can revise the choice at any time.

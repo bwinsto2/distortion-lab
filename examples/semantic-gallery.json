@@ -57,6 +57,244 @@
    }
   },
   {
+   "id": "plaid:net",
+   "kind": "plaid",
+   "label": "Plaid: net-like",
+   "recon": {
+    "renderer": "legacy-rectified",
+    "rendererVersion": "1.0.0",
+    "params": {
+     "contrast": 1,
+     "components": [
+      {
+       "id": 1,
+       "enabled": true,
+       "orientation": 90,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.65
+      },
+      {
+       "id": 2,
+       "enabled": true,
+       "orientation": 130,
+       "frequency": 2,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.35
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "plaid:beat-sf",
+   "kind": "plaid",
+   "label": "Plaid: soft bands (spacing beat)",
+   "recon": {
+    "renderer": "legacy-rectified",
+    "rendererVersion": "1.0.0",
+    "params": {
+     "contrast": 1,
+     "components": [
+      {
+       "id": 1,
+       "enabled": true,
+       "orientation": 90,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      },
+      {
+       "id": 2,
+       "enabled": true,
+       "orientation": 90,
+       "frequency": 4.48,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "plaid:seam-small",
+   "kind": "plaid",
+   "label": "Plaid: shifts across stripes (small angle)",
+   "recon": {
+    "renderer": "legacy-rectified",
+    "rendererVersion": "1.0.0",
+    "params": {
+     "contrast": 1,
+     "components": [
+      {
+       "id": 1,
+       "enabled": true,
+       "orientation": 90,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      },
+      {
+       "id": 2,
+       "enabled": true,
+       "orientation": 96,
+       "frequency": 4,
+       "phase": 90,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "plaid:seam-large",
+   "kind": "plaid",
+   "label": "Plaid: shifts across stripes (larger angle)",
+   "recon": {
+    "renderer": "legacy-rectified",
+    "rendererVersion": "1.0.0",
+    "params": {
+     "contrast": 1,
+     "components": [
+      {
+       "id": 1,
+       "enabled": true,
+       "orientation": 90,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      },
+      {
+       "id": 2,
+       "enabled": true,
+       "orientation": 102,
+       "frequency": 4,
+       "phase": 90,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "plaid:seam-oblique",
+   "kind": "plaid",
+   "label": "Plaid: oblique shifts",
+   "recon": {
+    "renderer": "legacy-rectified",
+    "rendererVersion": "1.0.0",
+    "params": {
+     "contrast": 1,
+     "components": [
+      {
+       "id": 1,
+       "enabled": true,
+       "orientation": 90,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      },
+      {
+       "id": 2,
+       "enabled": true,
+       "orientation": 96,
+       "frequency": 4.32,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "plaid:interrupted",
+   "kind": "plaid",
+   "label": "Plaid: interrupted",
+   "recon": {
+    "renderer": "legacy-rectified",
+    "rendererVersion": "1.0.0",
+    "params": {
+     "contrast": 1,
+     "components": [
+      {
+       "id": 1,
+       "enabled": true,
+       "orientation": 110,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      },
+      {
+       "id": 2,
+       "enabled": true,
+       "orientation": 70,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.5
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "plaid:wavy",
+   "kind": "plaid",
+   "label": "Plaid: wavy",
+   "recon": {
+    "renderer": "legacy-rectified",
+    "rendererVersion": "1.0.0",
+    "params": {
+     "contrast": 1,
+     "components": [
+      {
+       "id": 1,
+       "enabled": true,
+       "orientation": 105,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.7
+      },
+      {
+       "id": 2,
+       "enabled": true,
+       "orientation": 75,
+       "frequency": 4,
+       "phase": 0,
+       "duty": 0,
+       "threshold": 1,
+       "weight": 0.3
+      }
+     ]
+    }
+   }
+  },
+  {
    "id": "misorientation:mild",
    "kind": "family",
    "label": "Tilted (mild)",

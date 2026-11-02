@@ -281,9 +281,34 @@ function post(port, p, body) {
     await page.click('[data-tab=experimenter]');
     await page.check('#stereoOn');
     const view = () => stim.evaluate(() => DistortionLabStimulus.getState().view);
-    await stim.waitForFunction(() => DistortionLabStimulus.getState().view && DistortionLabStimulus.getState().view.eye === 'AE');
+    // Step 1: Choose - ring of 8 starting pictures, both eyes (test grating fuses into the empty centre)
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view && DistortionLabStimulus.getState().view.eye === 'both');
+    let v0 = await view();
+    assert(v0.ring && v0.ring.items.length === 8 && v0.ring.highlight === 0 && v0.overlay.title === 'CHOOSE THE CLOSEST', J(v0.overlay));
+    assert(v0.ring.items.every((it) => it && it.recon), 'first page full');
     await page.evaluate(() => document.activeElement && document.activeElement.blur());
-    await page.keyboard.press('Space');
+    await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.ring.highlight === 2);
+    await page.keyboard.press('ArrowDown');                    // next page
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.overlay.lines[0].text.startsWith('Page 2'));
+    if (SHOTS) await stim.screenshot({ path: path.join(SHOTS, '11-stereoscope-choose.png') });
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft');  // wraps to "None of these"
+    const lastPage = await view();
+    assert(lastPage.ring.items[lastPage.ring.highlight].none, 'None of these slot');
+    await page.keyboard.press('Enter');
+    assert((await sess()).actions.some((a) => a.type === 'gallery-none-close' && a.source === 'keyboard'), 'none-close recorded');
+    assert(await page.isVisible('#tab-describe'), 'researcher sent to the description tab');
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.keyboard.press('ArrowRight');                   // back to the first item: unchanged reference
+    await page.keyboard.press('ArrowRight');                   // plaid: net-like
+    await page.keyboard.press('Enter');
+    assert((await work()).origin.id === 'plaid:net', J((await work()).origin));
+    assert((await page.evaluate(() => DistortionLab.stereoState().mode)) === 'adjust', 'choosing moves on to Adjust');
+    await page.evaluate(() => DistortionLab.chooseGallery('zigzag:mild'));
+    await page.keyboard.press('Space');                        // both -> amblyopic eye
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'AE');
+    await page.keyboard.press('Space');                        // -> fellow eye
     await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'FE');
     let v = await view();
     assert(v.overlay.title === 'ADJUST' && v.overlay.lines.some((l) => l.strong), J(v.overlay));
@@ -308,13 +333,17 @@ function post(port, p, body) {
     assert(J((await work()).recon) === J(set.candidates[0].recon), 'press chooses the version shown');
     await page.keyboard.press('z');
     assert(J((await work()).recon) === before, 'undo button');
-    await stim.keyboard.press('Space');                       // keys typed in the stimulus window reach the console
-    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'AE');
+    await stim.keyboard.press('Space');                       // keys typed in the stimulus window reach the console (FE -> both)
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'both');
     // Mouse as controller in the stimulus window
     await stim.mouse.move(700, 500);
-    await stim.mouse.click(700, 500, { button: 'right' });   // switch eye
+    await stim.mouse.click(700, 500, { button: 'right' });   // switch eye: both -> AE
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'AE');
+    await stim.mouse.click(700, 500, { button: 'right' });   // AE -> FE
     await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'FE');
-    await stim.mouse.click(700, 500, { button: 'middle' });  // compare -> adjust
+    await stim.mouse.click(700, 500, { button: 'middle' });  // compare -> choose
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().view.overlay.title === 'CHOOSE THE CLOSEST');
+    await stim.mouse.click(700, 500, { button: 'middle' });  // choose -> adjust
     await stim.waitForFunction(() => DistortionLabStimulus.getState().view.overlay.title === 'ADJUST');
     const ctlState = await page.evaluate(() => DistortionLab.stereoState());
     const wBefore = J((await work()).recon);
@@ -326,9 +355,11 @@ function post(port, p, body) {
     await page.waitForFunction((c) => DistortionLab.stereoState().ctl === c + 1, ctlState.ctl);
     await stim.mouse.down(); await sleep(1100); await stim.mouse.up();   // hold = new alternatives
     await stim.waitForFunction(() => DistortionLabStimulus.getState().view.overlay.title === 'COMPARE');
-    await stim.mouse.click(700, 500, { button: 'right' });   // back to amblyopic eye for the MIDI part
+    await stim.mouse.click(700, 500, { button: 'right' });   // FE -> both
+    await stim.mouse.click(700, 500, { button: 'right' });   // both -> AE, for the MIDI part
     await stim.waitForFunction(() => DistortionLabStimulus.getState().view.eye === 'AE');
     // Simulated MIDI controller: learn, then use
+    await page.click('[data-tab=experimenter]');
     await page.evaluate(() => DistortionLab.startControllerSetup());
     const midiSend = (bytes) => page.evaluate((b) => DistortionLab.midiMessage(b), bytes);
     for (const val of [1, 1, 2, 65, 65, 66]) await midiSend([0xB0, 16, val]);
@@ -338,7 +369,8 @@ function post(port, p, body) {
     assert(await page.isHidden('#midiLearnBox'), 'setup finished');
     await midiSend([0x90, 89, 127]);                           // eye button
     assert((await page.evaluate(() => DistortionLab.stereoState().eye)) === 'FE');
-    await midiSend([0x90, 90, 127]);                           // mode -> adjust
+    await midiSend([0x90, 90, 127]);                           // mode: compare -> choose
+    await midiSend([0x90, 90, 127]);                           // choose -> adjust
     const st = await page.evaluate(() => DistortionLab.stereoState());
     assert(st.mode === 'adjust', J(st));
     const w0 = await work();

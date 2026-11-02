@@ -684,9 +684,24 @@
       return { id: a + ':' + lv[0] + '+' + b + ':' + lv[1], label: A.label + ' (' + lv[0] + ') + ' + B.label + ' (' + lv[1] + ')', recon: r };
     });
   }
-  /** All gallery tiles for the current reference. */
+  /** Two-grating plaid relative to the test grating (legacy renderer; linear because K=0, T=1, W1+W2<=1). */
+  function plaidRecon(reference, spec) {
+    var comp = function (id, c) {
+      return { id: id, enabled: true,
+        orientation: quantize(LEG_DEFS.orientation, wrapPeriodic(LEG_DEFS.orientation, reference.orientation + c.dOri)),
+        frequency: quantize(LEG_DEFS.frequency, reference.frequency * c.fMul),
+        phase: quantize(LEG_DEFS.phase, wrapPeriodic(LEG_DEFS.phase, reference.phase + c.phase)),
+        duty: 0, threshold: 1, weight: quantize(LEG_DEFS.weight, c.w) };
+    };
+    return { renderer: 'legacy-rectified', rendererVersion: LEG.version,
+      params: { contrast: reference.contrast, components: [comp(1, spec.c1), comp(2, spec.c2)] } };
+  }
+  /** All gallery tiles for the current reference. Order: unchanged, plaid types, feature families, combinations, original forms. */
   function galleryItems(reference) {
     var items = [{ id: 'reference', kind: 'reference', label: 'Unchanged reference', families: [], recon: identityRecon(reference) }];
+    (GAL.plaids || []).forEach(function (pl) {
+      items.push({ id: 'plaid:' + pl.id, kind: 'plaid', label: pl.label, families: [], recon: plaidRecon(reference, pl) });
+    });
     GAL.families.forEach(function (f) {
       ['mild', 'strong'].forEach(function (lv) {
         items.push({ id: f.id + ':' + lv, kind: 'family', family: f.id, level: lv, label: f.label + ' (' + lv + ')', families: [f.id], recon: templateRecon(reference, f.id, lv) });
@@ -1047,7 +1062,7 @@
     newSession: newSession, commit: commit, endCoalesce: endCoalesce, undo: undo, redo: redo, log: log,
     setParam: setParam, nudge: nudge, togglePin: togglePin, withPins: withPins, applyRecon: applyRecon,
     addComponent: addComponent, removeComponent: removeComponent, mixLegacy: mixLegacy,
-    galleryItems: galleryItems, galleryItem: galleryItem, galleryFamily: galleryFamily, templateRecon: templateRecon, combinationRecons: combinationRecons,
+    galleryItems: galleryItems, galleryItem: galleryItem, plaidRecon: plaidRecon, galleryFamily: galleryFamily, templateRecon: templateRecon, combinationRecons: combinationRecons,
     chooseGallery: chooseGallery, recordGalleryOutcome: recordGalleryOutcome,
     generateProposals: generateProposals, requestAlternatives: requestAlternatives, recordCandidates: recordCandidates, combine: combine, chooseCandidate: chooseCandidate, canChoose: canChoose,
     captureDescription: captureDescription, setOutcome: setOutcome, accept: accept, setReference: setReference, setLayout: setLayout, eyeRouting: eyeRouting,

@@ -13,7 +13,7 @@
   var backend = false, aiStatus = { provider: 'none', connected: false, label: 'AI off', detail: '' };
   var ui = { tab: 'gallery', selectedComponent: null, multi: false, multiSel: [], comboSet: null, currentSet: null, marking: false,
     region: null, structureKey: null, galleryKey: null, seqStart: Date.now(), stimWin: null, display: null, pendingResume: false,
-    preview: null, stereo: { on: false, eye: 'AE', mode: 'adjust', ctl: 0, status: '', statusUntil: 0 },
+    preview: null, stereo: { on: false, eye: 'both', mode: 'choose', ctl: 0, lib: 0, status: '', statusUntil: 0 },
     descContext: 'still-different', saveState: { local: null, server: null, error: null }, lastDesc: null, aiSet: null };
   var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('distortion-lab-v2') : null;
 
@@ -145,7 +145,7 @@
     var pv = previewInfo(), showPv = pv && (ui.stereo.on || $('previewOnStim').checked);
     var recon = showPv ? pv.cand.recon : S.work.recon;
     return { type: 'state', reference: S.reference, recon: recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId, previewing: !!showPv,
-      view: ui.stereo.on ? { eye: ui.stereo.eye, overlay: stereoOverlay() } : null };
+      view: ui.stereo.on ? { eye: ui.stereo.eye, overlay: stereoOverlay(), ring: ui.stereo.mode === 'choose' ? stereoRing() : null } : null };
   }
   function broadcast() {
     if (!S) return;
@@ -793,8 +793,35 @@
     var rec = ui.currentSet && S.proposals.filter(function (p) { return p.id === ui.currentSet; })[0];
     return rec && rec.candidates.length && C.canChoose(S, rec.id) ? rec : null;
   }
+  /** Starting-point library for the stereoscope: unchanged, plaid types, feature families, combinations, then "None of these". */
+  var libCache = { key: null, items: [] };
+  function stereoLibrary() {
+    var key = JSON.stringify(S.reference);
+    if (libCache.key !== key) {
+      libCache = { key: key, items: C.galleryItems(S.reference).filter(function (it) { return it.kind !== 'legacy'; })
+        .concat([{ id: 'none', kind: 'none', label: 'None of these' }]) };
+    }
+    return libCache.items;
+  }
+  function stereoRing() {
+    var lib = stereoLibrary(), st = ui.stereo;
+    st.lib = ((st.lib % lib.length) + lib.length) % lib.length;
+    var page = Math.floor(st.lib / 8), items = [];
+    for (var i = 0; i < 8; i++) {
+      var it = lib[page * 8 + i];
+      items.push(!it ? null : (it.kind === 'none' ? { none: true } : { recon: it.recon }));
+    }
+    return { items: items, highlight: st.lib % 8 };
+  }
   function stereoOverlay() {
-    var st = ui.stereo, o = { title: st.mode === 'adjust' ? 'ADJUST' : 'COMPARE', lines: [], status: Date.now() < st.statusUntil ? st.status : '' };
+    var st = ui.stereo, o = { title: st.mode === 'choose' ? 'CHOOSE THE CLOSEST' : (st.mode === 'adjust' ? 'ADJUST' : 'COMPARE'), lines: [],
+      status: Date.now() < st.statusUntil ? st.status : '' };
+    if (st.mode === 'choose') {
+      var lib = stereoLibrary(), pages = Math.ceil(lib.length / 8);
+      o.lines.push({ text: 'Page ' + (Math.floor(st.lib / 8) + 1) + ' of ' + pages, strong: true });
+      o.lines.push({ text: 'Turn to move · press to choose', faint: true });
+      return o;
+    }
     if (st.mode === 'adjust') {
       var list = stereoControls();
       if (!list.length) { o.lines.push({ text: 'Nothing to adjust' }); return o; }
@@ -825,8 +852,30 @@
     var st = ui.stereo;
     if (!st.on || !S || ui.pendingResume) return false;
     var sign = steps < 0 ? -1 : 1;
-    if (action === 'eye') { st.eye = st.eye === 'AE' ? 'FE' : 'AE'; }
-    else if (action === 'mode') { st.mode = st.mode === 'adjust' ? 'compare' : 'adjust'; if (st.mode === 'adjust') ui.preview = null; }
+    if (action === 'eye') { st.eye = st.eye === 'AE' ? 'FE' : (st.eye === 'FE' ? 'both' : 'AE'); }
+    else if (action === 'mode') {
+      st.mode = st.mode === 'choose' ? 'adjust' : (st.mode === 'adjust' ? 'compare' : 'choose');
+      if (st.mode !== 'compare') ui.preview = null;
+    }
+    else if (st.mode === 'choose' && (action === 'value' || action === 'select')) {
+      st.lib += action === 'select' ? 8 * sign : steps;
+    }
+    else if (st.mode === 'choose' && action === 'press') {
+      var lib = stereoLibrary(), item = lib[((st.lib % lib.length) + lib.length) % lib.length];
+      if (item.kind === 'none') {
+        C.recordGalleryOutcome(S, 'none-close', { current: S.work.origin, source: source });
+        ui.descContext = 'none-close';
+        $('describeLead').textContent = 'None of the pictures were close. Please describe, in your own words, what you see.';
+        switchTab('describe');
+        stereoFlash('Please tell the researcher what you see');
+        toast('Participant chose "None of these". Type their description in the "Still different?" tab.', 7000);
+        scheduleSave();
+      } else if (Lab.chooseGallery(item.id) !== undefined) {
+        st.mode = 'adjust'; st.ctl = 0;
+        stereoFlash('Chosen. Now adjust it');
+      } else stereoFlash('Not available, please tell the researcher');
+    }
+    else if (st.mode === 'choose' && action === 'alts') { stereoFlash('Choose a starting picture first'); }
     else if (action === 'select') { st.ctl += sign; }
     else if (action === 'value') {
       if (st.eye === 'AE') stereoFlash('Switch to the fellow eye to adjust');
@@ -858,7 +907,7 @@
   }
   function setStereo(on) {
     ui.stereo.on = on;
-    if (on) { ui.stereo.eye = 'AE'; ui.stereo.mode = 'adjust'; ui.preview = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    if (on) { ui.stereo.eye = 'both'; ui.stereo.mode = 'choose'; ui.stereo.lib = 0; ui.preview = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
     C.log(S, 'participant-controls', { on: on });
     refresh(); broadcast(); scheduleSave();
   }

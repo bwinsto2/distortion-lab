@@ -57,9 +57,10 @@
     var roles = {}, info = { n: n, diameterCss: dCss, showing: null, roles: roles };
     var view = state.view || null;          // participant controls: {eye: 'AE'|'FE'|'both', overlay}
     var aeSide = L.referenceSide, feSide = aeSide === 'left' ? 'right' : 'left';
+    var feOn = view && (view.eye === 'FE' || view.eye === 'both');
     if (view) {
       if (view.eye === 'AE' || view.eye === 'both') roles[aeSide] = 'reference';
-      if (view.eye === 'FE' || view.eye === 'both') roles[feSide] = 'reconstruction';
+      if (feOn && !view.ring) roles[feSide] = 'reconstruction';
     } else if (L.comparison === 'simultaneous') {
       roles[L.referenceSide] = 'reference';
       roles[L.referenceSide === 'left' ? 'right' : 'left'] = 'reconstruction';
@@ -85,10 +86,38 @@
         ctx.fillText(side + (role ? ' · ' + role : ' · empty') + (eye !== 'unassigned' ? ' · ' + eye : '') + (visible ? '' : ' (hidden)'), x, Math.min(H - 4, y + dCss / 2 + 13));
       }
     });
-    if (view && view.overlay && (view.eye === 'FE' || view.eye === 'both'))
-      drawOverlay(ctx, centers[feSide][0], centers[feSide][1], dCss / 2, Math.max(9, Math.min(30, 0.17 * L.ppd * scale)), view.overlay);
+    var fs = Math.max(9, Math.min(30, 0.17 * L.ppd * scale));
+    if (feOn && view.ring) {
+      var ext = drawRing(ctx, centers[feSide][0], centers[feSide][1], dCss, dpr, geom, view.ring, feSide, W, H, fs);
+      info.ringScale = ext.k;
+      if (view.overlay) drawOverlay(ctx, centers[feSide][0], centers[feSide][1], ext.half, fs, view.overlay);
+    } else if (feOn && view.overlay) drawOverlay(ctx, centers[feSide][0], centers[feSide][1], dCss / 2, fs, view.overlay);
     info.warnings = warnings(state, W / scale, H / scale, n, centers, dCss / scale);
     return info;
+  }
+
+  // Ring of 8 options around the (empty) fellow-eye centre, clockwise from top-left, so that with both eyes
+  // the amblyopic-eye test grating fuses into the middle (as in Maruya et al.'s dichoptic choice display).
+  var RING = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
+  function drawRing(ctx, x, y, dCss, dpr, geom, ring, side, W, H, fs) {
+    var gap = 1.15, x0 = side === 'left' ? 0 : W / 2, x1 = side === 'left' ? W / 2 : W;
+    var availW = 2 * Math.min(x - x0, x1 - x), availH = 2 * Math.min(y, H - y) - 6 * fs;
+    var k = Math.max(0.25, Math.min(1, availW / (3 * gap * dCss), availH / (3 * gap * dCss)));
+    var d = dCss * k, step = d * gap, n = Math.max(8, Math.min(1024, Math.ceil(d * dpr)));
+    RING.forEach(function (o, i) {
+      var cx = x + o[0] * step, cy = y + o[1] * step, it = ring.items[i];
+      if (it && it.recon) ctx.drawImage(rasterCanvas(it.recon, n, geom), cx - d / 2, cy - d / 2, d, d);
+      else if (it && it.none) {
+        ctx.strokeStyle = 'rgb(72,72,72)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, d / 2 - 2, 0, 2 * Math.PI); ctx.stroke();
+        ctx.fillStyle = 'rgb(40,40,40)'; ctx.font = '600 ' + Math.round(fs) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('None of', cx, cy - fs * 0.6); ctx.fillText('these', cx, cy + fs * 0.6); ctx.textBaseline = 'alphabetic';
+      }
+      if (i === ring.highlight) {
+        ctx.strokeStyle = 'rgb(20,20,20)'; ctx.lineWidth = Math.max(2, fs * 0.25);
+        ctx.beginPath(); ctx.arc(cx, cy, d / 2 + Math.max(3, fs * 0.35), 0, 2 * Math.PI); ctx.stroke();
+      }
+    });
+    return { k: k, half: step + d / 2 };
   }
 
   /**

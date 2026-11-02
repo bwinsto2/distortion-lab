@@ -995,6 +995,121 @@
      "misorientation",
      "bend"
     ]
+   ],
+   "plaidNotes": "Two-grating plaids (sum of two unclipped sinusoids) rendered with the legacy-rectified renderer (K=0, T=1, W = component contrast, W1+W2 <= 1 so the final clip is inactive). The seven types follow the categories described by Maruya et al. (bioRxiv 2025, doi:10.1101/2025.06.24.661078; Barrett et al. 2003 drawings). Parameters are our approximations relative to the test grating, not the authors' values. dOri in deg, fMul multiplies the test frequency, phase in deg, w = contrast weight.",
+   "plaids": [
+    {
+     "id": "net",
+     "label": "Plaid: net-like",
+     "c1": {
+      "dOri": 0,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.65
+     },
+     "c2": {
+      "dOri": 40,
+      "fMul": 0.5,
+      "phase": 0,
+      "w": 0.35
+     }
+    },
+    {
+     "id": "beat-sf",
+     "label": "Plaid: soft bands (spacing beat)",
+     "c1": {
+      "dOri": 0,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.5
+     },
+     "c2": {
+      "dOri": 0,
+      "fMul": 1.12,
+      "phase": 0,
+      "w": 0.5
+     }
+    },
+    {
+     "id": "seam-small",
+     "label": "Plaid: shifts across stripes (small angle)",
+     "c1": {
+      "dOri": 0,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.5
+     },
+     "c2": {
+      "dOri": 6,
+      "fMul": 1,
+      "phase": 90,
+      "w": 0.5
+     }
+    },
+    {
+     "id": "seam-large",
+     "label": "Plaid: shifts across stripes (larger angle)",
+     "c1": {
+      "dOri": 0,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.5
+     },
+     "c2": {
+      "dOri": 12,
+      "fMul": 1,
+      "phase": 90,
+      "w": 0.5
+     }
+    },
+    {
+     "id": "seam-oblique",
+     "label": "Plaid: oblique shifts",
+     "c1": {
+      "dOri": 0,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.5
+     },
+     "c2": {
+      "dOri": 6,
+      "fMul": 1.08,
+      "phase": 0,
+      "w": 0.5
+     }
+    },
+    {
+     "id": "interrupted",
+     "label": "Plaid: interrupted",
+     "c1": {
+      "dOri": 20,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.5
+     },
+     "c2": {
+      "dOri": -20,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.5
+     }
+    },
+    {
+     "id": "wavy",
+     "label": "Plaid: wavy",
+     "c1": {
+      "dOri": 15,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.7
+     },
+     "c2": {
+      "dOri": -15,
+      "fMul": 1,
+      "phase": 0,
+      "w": 0.3
+     }
+    }
    ]
   }
  },

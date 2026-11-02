@@ -22,7 +22,15 @@
   function sanitizeView(v) {
     if (!v || typeof v !== 'object' || ['AE', 'FE', 'both'].indexOf(v.eye) < 0) return null;
     var o = v.overlay && typeof v.overlay === 'object' ? v.overlay : null, str = function (t) { return typeof t === 'string' ? t.slice(0, 80) : ''; };
-    return { eye: v.eye, overlay: o ? { title: str(o.title), status: str(o.status), lines: (Array.isArray(o.lines) ? o.lines.slice(0, 6) : []).map(function (l) {
+    var ring = null;
+    if (v.ring && typeof v.ring === 'object' && Array.isArray(v.ring.items)) {
+      ring = { highlight: (v.ring.highlight | 0), items: v.ring.items.slice(0, 8).map(function (it) {
+        if (!it || typeof it !== 'object') return null;
+        if (it.none) return { none: true };
+        try { return { recon: C.validateRecon(it.recon) }; } catch (e) { return null; }
+      }) };
+    }
+    return { eye: v.eye, ring: ring, overlay: o ? { title: str(o.title), status: str(o.status), lines: (Array.isArray(o.lines) ? o.lines.slice(0, 6) : []).map(function (l) {
       return { text: str(l && l.text), faint: !!(l && l.faint), strong: !!(l && l.strong), bar: l && typeof l.bar === 'number' ? l.bar : undefined }; }) } : null };
   }
   if (bc) bc.onmessage = function (e) { accept(e.data); };

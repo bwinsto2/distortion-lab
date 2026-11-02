@@ -133,6 +133,15 @@ irregularity and seed, gap orientation and edge softness, gap/break brightness, 
 
 The full ranges, steps and defaults are in [PARAMETERS.md](PARAMETERS.md), generated from `shared/parameters.json`.
 
+## Plaid gallery items
+
+The 7 plaid starting points are drawn with the original synthesis renderer: two components with `K = 0`, `T = 1` and
+`W1 + W2 ≤ 1`, so `P = W1·G1 + W2·G2` exactly, a linear sum of two sinusoidal gratings. They follow the phantom
+categories described by Maruya et al. (bioRxiv 2025, doi:10.1101/2025.06.24.661078): net-like, soft bands, shifts at
+small, larger and oblique angles, interrupted, and wavy. They are built relative to the test grating; the parameters
+are our approximations, not the authors' values (`shared/parameters.json` → `gallery.plaids`). Each component's
+orientation, frequency, phase and weight (contrast) can then be adjusted, as in their 8-slider refinement.
+
 ## Proposals (comparison-driven refinement)
 
 Proposals are deterministic and seeded. They are not AI-generated images.

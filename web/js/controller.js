@@ -16,11 +16,11 @@
   var ACTIONS = [
     { id: 'value', kind: 'turn', label: 'Main knob: turn it RIGHT a few clicks, then LEFT a few clicks', required: true },
     { id: 'press', kind: 'press', label: 'Main knob PRESS (next control / choose)', required: true },
-    { id: 'eye', kind: 'press', label: 'Button: Switch eye', required: true },
-    { id: 'mode', kind: 'press', label: 'Button: Adjust / Compare', required: true },
+    { id: 'eye', kind: 'press', label: 'Button: Switch eye (amblyopic / fellow / both)', required: true },
+    { id: 'mode', kind: 'press', label: 'Button: Mode (Choose / Adjust / Compare)', required: true },
     { id: 'alts', kind: 'press', label: 'Button: New alternatives', required: false },
     { id: 'undo', kind: 'press', label: 'Button: Undo', required: false },
-    { id: 'select', kind: 'turn', label: 'Optional second knob: choose which control (turn right, then left)', required: false }
+    { id: 'select', kind: 'turn', label: 'Optional second knob: choose which control / page (turn right, then left)', required: false }
   ];
 
   /** Parse a raw MIDI message (array of bytes). */
