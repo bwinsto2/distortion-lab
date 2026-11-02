@@ -30,7 +30,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 from . import VERSION
-from .ai_bridge import Bridge
+from .ai_bridge import Bridge, sanitize_context
 from .model import ROOT, ValidationError, apply_operations, render_png, validate_recon, validate_work
 from .storage import Storage
 
@@ -247,7 +247,7 @@ def make_handler(app):
                 ctx = body.get("context")
                 if not isinstance(ctx, dict) or ctx.get("renderer") != work["recon"]["renderer"]:
                     raise ValidationError("context renderer must match the work")
-                ctx = dict(ctx, params=work["recon"]["params"], pins=work["pins"])
+                ctx = sanitize_context(dict(ctx, params=work["recon"]["params"], pins=work["pins"]))
                 try:
                     raw = app.bridge.propose(ctx, body.get("count", 4))
                 except RuntimeError as e:

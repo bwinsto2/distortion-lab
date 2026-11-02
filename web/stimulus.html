@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distortion Lab · stimulus</title>
+<style>
+  html, body { margin: 0; height: 100%; background: rgb(128,128,128); overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #bar { position: fixed; top: 8px; left: 8px; font: 12px sans-serif; color: #111; background: rgba(255,255,255,.75); padding: 6px 8px; border-radius: 6px; }
+  #bar button { font: inherit; }
+  body.present #bar { display: none; }
+  body.present.hide-cursor { cursor: none; }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="bar">
+  <strong>Stimulus window</strong> · <span id="status">waiting for the console…</span>
+  <button id="present">Presentation mode (F)</button>
+  <div style="max-width:420px;margin-top:4px">Drag this window to the stereoscope display. Press F or the button for fullscreen; Esc leaves. Screen position does not isolate the eyes; the mirror stereoscope does.</div>
+</div>
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/stimulus.js"></script>
+</body>
+</html>

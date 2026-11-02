@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distortion Lab</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><strong>Distortion Lab</strong> <span id="version" class="muted"></span></div>
+  <div class="pills">
+    <span id="backendStatus" class="pill" title="Backend connection">Backend…</span>
+    <span id="aiStatus" class="pill" title="Optional AI bridge">AI…</span>
+    <span id="saveStatus" class="pill muted" title="Autosave status">Not saved yet</span>
+  </div>
+  <div class="actions">
+    <button id="undo" title="Undo (Ctrl/Cmd+Z)">Undo</button>
+    <button id="redo" title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+    <label class="toggle" title="Hide experimenter controls and researcher labels"><input type="checkbox" id="participantMode"> Participant layout</label>
+    <button id="openStimulus" title="Open the stimulus presentation window">Open stimulus window</button>
+  </div>
+</header>
+
+<div id="resumeBanner" class="banner" hidden>
+  <span id="resumeText"></span>
+  <button id="resumeYes" class="primary">Resume</button>
+  <button id="resumeNo">Start a new session</button>
+</div>
+<div id="browserOnly" class="banner warn" hidden>
+  <strong>Browser-only mode.</strong> The Python backend is not reachable, so this page autosaves only to this browser's local storage.
+  Not available here: server-side session files and SQLite index, Python-rendered export bundles, the AI bridge, and external dial control.
+  JSON and PNG downloads, all matching controls, comparisons, undo/redo and description capture still work.
+  Start the full app with <code>python3 run.py</code>.
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<main class="layout">
+  <section class="views" aria-label="Stimuli">
+    <figure class="view main-view">
+      <div class="canvas-wrap">
+        <canvas id="reconCanvas" width="360" height="360" aria-label="Current reconstruction"></canvas>
+        <div id="markOverlay" class="mark" hidden></div>
+      </div>
+      <figcaption>Current reconstruction <span id="reconInfo" class="muted researcher"></span></figcaption>
+    </figure>
+    <figure class="view">
+      <canvas id="refCanvas" width="160" height="160" aria-label="Reference grating"></canvas>
+      <figcaption>Reference grating</figcaption>
+    </figure>
+    <figure class="view researcher wide">
+      <canvas id="previewCanvas" width="400" height="225" aria-label="Stimulus window preview"></canvas>
+      <figcaption>Stimulus window preview <span id="previewInfo" class="muted"></span></figcaption>
+    </figure>
+    <div id="warnings" class="warn-box" hidden></div>
+  </section>
+
+  <section class="panel" aria-label="Matching">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="gallery" class="active">1 · Choose</button>
+      <button role="tab" data-tab="adjust">2 · Adjust</button>
+      <button role="tab" data-tab="alternatives">3 · Compare</button>
+      <button role="tab" data-tab="describe">Still different?</button>
+      <button role="tab" data-tab="experimenter" class="researcher">Experimenter</button>
+      <button role="tab" data-tab="records" class="researcher">Records</button>
+    </nav>
+
+    <!-- 1 Gallery -->
+    <div class="tab" id="tab-gallery">
+      <p class="lead">Which picture looks most like what you see? Pick one to start from. You can change it later.</p>
+      <div class="row">
+        <button id="multiSelect">More than one of these</button>
+        <button id="noneClose">None of these are close</button>
+        <span id="multiHint" class="muted"></span>
+        <button id="showCombos" class="primary" hidden>Show combinations</button>
+      </div>
+      <div id="comboArea" hidden>
+        <h3>Combinations <button id="comboBack" class="small">Back to all pictures</button></h3>
+        <div id="comboGrid" class="grid"></div>
+      </div>
+      <div id="galleryGrid" class="grid"></div>
+      <details class="researcher" id="legacyDetails">
+        <summary>Original synthesis forms (advanced; Barrett-inspired illustrative constructions)</summary>
+        <p class="note">Independent illustrative constructions in the original rectified-grating family (Olianezhad et al. 2025, Eqs. 1–2). Not the authors' fitted parameters, participant percepts or validated replicas. Shown here with their own construction parameters; their reference grating may differ from the current one.</p>
+        <div id="legacyGrid" class="grid"></div>
+      </details>
+    </div>
+
+    <!-- 2 Adjust -->
+    <div class="tab" id="tab-adjust" hidden>
+      <div class="row">
+        <span>Slider steps:</span>
+        <label><input type="radio" name="sliderStep" value="fine" checked> fine</label>
+        <label><input type="radio" name="sliderStep" value="coarse"> coarse</label>
+        <label class="toggle"><input type="checkbox" id="showAdvanced"> more controls</label>
+      </div>
+      <div id="controls"></div>
+      <div id="addFamilies" class="row wrap"></div>
+      <div id="legacyTools" hidden>
+        <h3>Mix original forms</h3>
+        <div class="row wrap">
+          <select id="mixA"></select> + <select id="mixB"></select>
+          <label>weights <input id="mixWa" type="number" min="0" max="2" step="0.05" value="0.5" class="num"> / <input id="mixWb" type="number" min="0" max="2" step="0.05" value="0.5" class="num"></label>
+          <button id="mixGo">Mix</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Alternatives -->
+    <div class="tab" id="tab-alternatives" hidden>
+      <p class="lead">Compare nearby versions. Choose the one closest to what you see, or keep the current one.</p>
+      <div class="row wrap">
+        <label>Focus <select id="altFocus"></select></label>
+        <span>Spacing:</span>
+        <label><input type="radio" name="propScale" value="coarse" checked> larger differences</label>
+        <label><input type="radio" name="propScale" value="fine"> smaller differences</label>
+        <label class="toggle" title="Each repeat around the same version uses smaller differences"><input type="checkbox" id="shrink" checked> shrink on repeat</label>
+      </div>
+      <div class="row">
+        <button id="showAlts" class="primary">Show alternatives</button>
+        <button id="repeatAlts" title="Another set around the current version, with smaller differences if 'shrink on repeat' is on">More, closer to current</button>
+      </div>
+      <div id="altInfo" class="muted"></div>
+      <div id="candidates" class="grid cand"></div>
+      <div class="row"><button id="keepCurrent" hidden>Keep current</button></div>
+    </div>
+
+    <!-- Describe -->
+    <div class="tab" id="tab-describe" hidden>
+      <p class="lead" id="describeLead">Please describe, in your own words, how what you see differs from the current picture.</p>
+      <textarea id="descText" rows="5" placeholder="Your description (saved exactly as written)"></textarea>
+      <div class="row wrap">
+        <button id="markRegion">Mark an area on the picture (optional)</button>
+        <button id="clearRegion" class="small" hidden>Clear mark</button>
+        <span id="regionInfo" class="muted"></span>
+      </div>
+      <fieldset>
+        <legend>If it helps, which of these does it relate to? (optional — choose any or none)</legend>
+        <div id="descProps" class="row wrap"></div>
+      </fieldset>
+      <div class="row wrap">
+        <button id="saveDesc" class="primary">Save description</button>
+        <button id="descAlts">Save and show alternatives for the chosen property</button>
+        <button id="aiSuggest" title="Optional AI bridge">Ask AI for suggestions</button>
+        <button id="devRequest" class="researcher">Export development request</button>
+      </div>
+      <p class="note" id="aiNote"></p>
+      <h3>How is the match right now?</h3>
+      <div class="row wrap" id="outcomeButtons">
+        <button data-outcome="matched">It matches</button>
+        <button data-outcome="approximate">Close but not exact</button>
+        <button data-outcome="unmatchable">It can't be matched with these pictures</button>
+        <button data-outcome="unstable">It keeps changing</button>
+        <button data-outcome="cannot-tell">I can't tell</button>
+        <button data-outcome="not-visible">I can't see it</button>
+      </div>
+      <div id="outcomeInfo" class="muted"></div>
+      <div id="descList" class="list"></div>
+    </div>
+
+    <!-- Experimenter -->
+    <div class="tab researcher" id="tab-experimenter" hidden>
+      <h3>Session</h3>
+      <div class="form">
+        <label>Participant label (pseudonym) <input id="participant" maxlength="120" placeholder="e.g. P-07"></label>
+        <label>Condition <input id="condition" maxlength="120" placeholder="e.g. session-A"></label>
+        <label class="full">Notes <textarea id="notes" rows="2" maxlength="20000"></textarea></label>
+      </div>
+      <div class="row wrap">
+        <button id="newSession">New session</button>
+        <button id="saveJson">Download session JSON</button>
+        <button id="loadJson">Open / import JSON…</button>
+        <input type="file" id="fileInput" accept=".json,application/json" hidden>
+        <button id="pngRecon">PNG: reconstruction</button>
+        <button id="pngRef">PNG: reference</button>
+        <button id="pngDisplay">PNG: display</button>
+        <button id="serverExport">Export bundle to data folder</button>
+      </div>
+      <div class="row wrap">
+        <label>Accept as <select id="acceptStatus"><option value="matched">matched</option><option value="approximate">approximate</option><option value="unmatchable">unmatchable</option><option value="unstable">unstable</option><option value="cannot-tell">cannot tell</option><option value="not-visible">not visible</option></select></label>
+        <button id="acceptRecord" class="primary">Record current reconstruction</button>
+        <span id="acceptInfo" class="muted"></span>
+      </div>
+      <details id="sessionsDetails"><summary>Saved sessions on this computer</summary><div id="sessionList" class="list"></div></details>
+
+      <h3>Reference grating (target)</h3>
+      <div id="refControls"></div>
+      <div class="row wrap">
+        <label>Load original form <select id="legacyLoad"></select></label>
+        <button id="legacyLoadGo" title="Sets the reference and reconstruction to the saved original preset; optics, routing and calibration are kept">Load as reference + reconstruction</button>
+      </div>
+
+      <h3>Presentation and optics</h3>
+      <div class="row wrap" id="visButtons">
+        <span>Visible:</span>
+        <button data-vis="both">Both</button><button data-vis="left">Left</button><button data-vis="right">Right</button><button data-vis="blank">Neither</button>
+      </div>
+      <div class="form">
+        <label>Reference side <select id="lay-referenceSide"><option>left</option><option>right</option></select></label>
+        <label>Left eye <select id="lay-leftEye"><option>unassigned</option><option>AE</option><option>FE</option></select></label>
+        <label>Right eye <select id="lay-rightEye"><option>unassigned</option><option>AE</option><option>FE</option></select></label>
+        <label><input type="checkbox" id="lay-linked"> Link eyes to reference side (reference → AE)</label>
+        <label>Aperture <select id="lay-aperture"><option value="circle">circular</option><option value="gaussian">Gaussian</option></select></label>
+        <label>Diameter (°) <input id="lay-diameter" type="number" step="0.1" min="0.5" max="10"></label>
+        <label>Gaussian σ (°) <input id="lay-sigma" type="number" step="0.01" min="0.05" max="5"></label>
+        <label>Pixels per degree (nominal) <input id="lay-ppd" type="number" step="1" min="10" max="300"></label>
+        <label>Centre separation (% width) <input id="lay-separation" type="number" step="0.5" min="10" max="80"></label>
+        <label>Right panel vertical offset (px) <input id="lay-vertical" type="number" step="1" min="-200" max="200"></label>
+        <label><input type="checkbox" id="lay-fixation"> Fixation mark</label>
+        <label>Comparison <select id="lay-comparison"><option value="simultaneous">simultaneous (left/right)</option><option value="sequential">sequential (alternating)</option><option value="toggle">toggle (manual)</option></select></label>
+        <label>Comparison position <select id="lay-comparisonSide"><option>left</option><option>right</option></select></label>
+        <label>Alternation (ms) <input id="lay-sequenceMs" type="number" step="50" min="100" max="10000"></label>
+      </div>
+      <div class="row"><button id="toggleShowing">Toggle shown stimulus</button><span id="toggleInfo" class="muted"></span></div>
+      <p class="note">Screen positions do not isolate the eyes: the mirror stereoscope does. Eye labels are metadata recorded with the session. Pixels per degree is nominal until measured through the stereoscope; no gamma or timing calibration is provided. Sequential/toggle modes show reference and reconstruction alternately at one position (one eye's channel).</p>
+      <details><summary>Nominal visual-angle calculator</summary>
+        <div class="row wrap">
+          <label>Optical viewing distance (cm) <input id="calDist" type="number" value="57" step="0.5" class="num"></label>
+          <label>Pixels per cm (CSS px) <input id="calPxcm" type="number" value="37.8" step="0.1" class="num"></label>
+          <button id="calApply">Set ppd</button><span id="calOut" class="muted"></span>
+        </div>
+      </details>
+
+      <h3>Labels, AI and checks</h3>
+      <div class="row wrap">
+        <label class="toggle"><input type="checkbox" id="showLabels" checked> Show researcher labels on pictures</label>
+        <button id="aiCheck">Check AI connection</button>
+        <button id="runTests">Run built-in checks</button>
+      </div>
+      <pre id="testOut" class="out" hidden></pre>
+    </div>
+
+    <!-- Records -->
+    <div class="tab researcher" id="tab-records" hidden>
+      <h3>Undo history</h3><div id="undoList" class="list"></div>
+      <h3>Accepted records</h3><div id="acceptedList" class="list"></div>
+      <h3>Alternatives shown</h3><div id="proposalList" class="list"></div>
+      <h3>Recent actions</h3><div id="actionList" class="list mono"></div>
+    </div>
+  </section>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

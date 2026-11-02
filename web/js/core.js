@@ -837,6 +837,8 @@
     if (rec.choice !== null) fail('A choice was already recorded for ' + setId);
     if (candId === 'keep') {
       rec.choice = 'keep'; rec.choiceTime = nowISO();
+      if (JSON.stringify(rec.base.recon) === JSON.stringify(s.work.recon))
+        s.neighborhood = { round: rec.settings && rec.settings.round || 0, anchor: JSON.stringify(s.work.recon) };
       log(s, 'keep-current', { set: setId });
       return false;
     }

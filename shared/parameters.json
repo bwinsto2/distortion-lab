@@ -105,9 +105,9 @@
     "families": [
       {"id": "misorientation", "label": "Tilted", "params": ["orientation"], "mild": {"orientationOffset": 10}, "strong": {"orientationOffset": 25}},
       {"id": "bend", "label": "Wavy / bent", "params": ["bendAmount", "bendSpacing"], "mild": {"bendAmount": 0.06, "bendSpacing": 1.4}, "strong": {"bendAmount": 0.15, "bendSpacing": 1.0}},
-      {"id": "zigzag", "label": "Zigzag", "params": ["zigAmount", "zigSpacing", "zigShape"], "mild": {"zigAmount": 0.06, "zigSpacing": 1.1, "zigShape": 0}, "strong": {"zigAmount": 0.14, "zigSpacing": 0.9, "zigShape": 0}},
-      {"id": "stepped", "label": "Stepped", "params": ["zigAmount", "zigSpacing", "zigShape"], "mild": {"zigAmount": 0.06, "zigSpacing": 1.2, "zigShape": 1}, "strong": {"zigAmount": 0.12, "zigSpacing": 1.0, "zigShape": 1}},
-      {"id": "offset", "label": "Offset at a boundary", "params": ["offsetAmount", "offsetPosition"], "mild": {"offsetAmount": 0.06, "offsetPosition": 0}, "strong": {"offsetAmount": 0.12, "offsetPosition": 0.3}},
+      {"id": "zigzag", "label": "Zigzag", "params": ["zigAmount", "zigSpacing", "zigShape"], "mild": {"zigAmount": 0.06, "zigSpacing": 1.1, "zigShape": 0}, "strong": {"zigAmount": 0.11, "zigSpacing": 0.9, "zigShape": 0}},
+      {"id": "stepped", "label": "Stepped", "params": ["zigAmount", "zigSpacing", "zigShape"], "mild": {"zigAmount": 0.03, "zigSpacing": 1.0, "zigShape": 1}, "strong": {"zigAmount": 0.05, "zigSpacing": 0.8, "zigShape": 1}},
+      {"id": "offset", "label": "Offset at a boundary", "params": ["offsetAmount", "offsetPosition"], "mild": {"offsetAmount": 0.04, "offsetPosition": 0}, "strong": {"offsetAmount": 0.08, "offsetPosition": 0.3}},
       {"id": "fragment", "label": "Broken stripes", "params": ["fragExtent", "fragLength"], "mild": {"fragExtent": 0.3, "fragLength": 0.7}, "strong": {"fragExtent": 0.55, "fragLength": 0.5}},
       {"id": "cross", "label": "Crossing lines", "params": ["crossStrength", "crossAngle", "crossSpacing"], "mild": {"crossStrength": 0.45, "crossAngle": 45, "crossSpacing": 0.5}, "strong": {"crossStrength": 0.85, "crossAngle": 90, "crossSpacing": 0.35}},
       {"id": "hole", "label": "Round gap", "params": ["holeSize", "holeShape", "holeX", "holeY"], "mild": {"holeSize": 0.45, "holeShape": "disc"}, "strong": {"holeSize": 0.85, "holeShape": "disc"}},
