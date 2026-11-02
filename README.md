@@ -36,6 +36,8 @@ python3 run.py
 
 The console opens at <http://127.0.0.1:8765/>. Options: `--port 8765`, `--data ./data`, `--no-browser`.
 Sessions are stored in `./data/` (or `$DISTORTION_LAB_DATA`). Stop with Ctrl+C.
+Starting it again while an earlier copy is still running stops the earlier copy and takes over (your data is kept). If
+an earlier copy can't be stopped, for example one started by an older version, it starts on the next free port and tells you.
 
 **Browser-only preview:** open `web/index.html` directly in a browser. Everything except the backend features works:
 gallery, sliders, comparisons, pins, undo/redo, description capture and JSON/PNG downloads. A banner states what is

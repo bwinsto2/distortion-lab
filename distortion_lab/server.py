@@ -18,6 +18,12 @@ Binds to 127.0.0.1 by default. Serves the web UI from ./web and a small JSON API
 from __future__ import annotations
 
 import argparse
+import errno
+import hmac
+import secrets
+import socket
+import time
+import urllib.request
 import json
 import mimetypes
 import os
@@ -235,6 +241,14 @@ def make_handler(app):
                 body = self._json_body() or {}
                 work = validate_work(body.get("work"))
                 return self._send(200, dict(ok=True, **apply_operations(work, body.get("operations"))))
+            if parts == ["shutdown"] and method == "POST":
+                body = self._json_body() or {}
+                token = getattr(app, "shutdown_token", None)
+                if not token or not isinstance(body, dict) or not hmac.compare_digest(str(body.get("token", "")), token):
+                    return self._error(403, "Invalid shutdown token")
+                self._send(200, {"ok": True, "stopping": True})
+                threading.Thread(target=app.stop, daemon=True).start()
+                return None
             if parts == ["ai", "status"] and method == "GET":
                 return self._send(200, {"ok": True, "ai": app.bridge.status()})
             if parts == ["ai", "check"] and method == "POST":
@@ -310,7 +324,76 @@ def make_server(host="127.0.0.1", port=8765, data_dir=None, env=None):
     httpd = ThreadingHTTPServer((host, port), make_handler(app))
     httpd.daemon_threads = True
     httpd.app = app
+
+    def stop():
+        httpd.shutdown()        # waits for serve_forever to return
+        httpd.server_close()    # release the port right away for the replacing instance
+    app.stop = stop
     return httpd
+
+
+def _runfile(data_dir, port):
+    return os.path.join(os.path.abspath(data_dir), ".server-%d.json" % port)
+
+
+def _probe(port, timeout=2):
+    """Return the /api/status of a Distortion Lab already listening on this port, else None."""
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:%d/api/status" % port, timeout=timeout) as r:
+            j = json.loads(r.read().decode("utf-8"))
+            return j if isinstance(j, dict) and j.get("ok") and "version" in j else None
+    except Exception:
+        return None
+
+
+def _stop_previous(port, data_dir):
+    """Ask an earlier Distortion Lab on this port to stop, using the token it left in the data folder."""
+    try:
+        with open(_runfile(data_dir, port), encoding="utf-8") as f:
+            token = json.load(f).get("token")
+        req = urllib.request.Request("http://127.0.0.1:%d/api/shutdown" % port, data=json.dumps({"token": token}).encode(),
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        urllib.request.urlopen(req, timeout=3).read()
+    except Exception:
+        return False
+    for _ in range(50):
+        time.sleep(0.1)
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+                pass
+        except OSError:
+            return True     # nothing listening any more
+    return False
+
+
+def start_server(host, port, data_dir, env=None, replace=True, tries=20):
+    """Bind, replacing an earlier Distortion Lab on the port if possible, else moving to the next free port."""
+    data_dir = data_dir or os.environ.get("DISTORTION_LAB_DATA") or os.path.join(ROOT, "data")
+    try:
+        return make_server(host, port, data_dir, env), None
+    except OSError as e:
+        if e.errno not in (errno.EADDRINUSE, getattr(errno, "WSAEADDRINUSE", -1)):
+            raise
+    note = None
+    other = _probe(port)
+    if other and replace and _stop_previous(port, data_dir):
+        for _ in range(30):
+            try:
+                return make_server(host, port, data_dir, env), "Stopped an earlier Distortion Lab (%s) that was still running on port %d." % (other.get("version"), port)
+            except OSError:
+                time.sleep(0.1)
+    if other:
+        note = ("An earlier Distortion Lab (%s) is still running on port %d and could not be stopped automatically "
+                "(it may be an older version). Close the Terminal window running it, or stop it with:\n"
+                "    lsof -ti tcp:%d | xargs kill\n" % (other.get("version"), port, port))
+    else:
+        note = "Port %d is used by another program." % port
+    for p in range(port + 1, port + 1 + tries):
+        try:
+            return make_server(host, p, data_dir, env), note + "  Using port %d instead." % p
+        except OSError:
+            continue
+    raise SystemExit(note + "  No free port found between %d and %d." % (port + 1, port + tries))
 
 
 def main(argv=None):
@@ -320,7 +403,18 @@ def main(argv=None):
     ap.add_argument("--data", default=None, help="data directory (default ./data or $DISTORTION_LAB_DATA)")
     ap.add_argument("--no-browser", action="store_true", help="do not open a browser window")
     a = ap.parse_args(argv)
-    httpd = make_server(a.host, a.port, a.data)
+    httpd, note = start_server(a.host, a.port, a.data)
+    port = httpd.server_address[1]
+    httpd.app.shutdown_token = secrets.token_hex(16)
+    runfile = _runfile(httpd.app.storage.dir, port)
+    try:
+        with open(runfile, "w", encoding="utf-8") as f:
+            json.dump({"pid": os.getpid(), "port": port, "version": VERSION, "token": httpd.app.shutdown_token}, f)
+        os.chmod(runfile, 0o600)
+    except OSError:
+        pass
+    if note:
+        print(note)
     url = "http://%s:%d/" % ("127.0.0.1" if a.host in ("0.0.0.0", "127.0.0.1") else a.host, httpd.server_address[1])
     print("Distortion Lab %s" % VERSION)
     print("  console:  %s" % url)
@@ -332,10 +426,15 @@ def main(argv=None):
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:
         httpd.serve_forever()
+        print("Stopped: a newer start of Distortion Lab took over this port.")
     except KeyboardInterrupt:
         print("\nStopped.")
     finally:
         httpd.server_close()
+        try:
+            os.remove(runfile)
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":

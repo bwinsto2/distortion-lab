@@ -369,3 +369,41 @@ class TestClaudeCodeProvider(ServerCase):
         b.claude_bin = None
         self.assertFalse(b.status()["connected"])
         self.assertIn("not found", b.status()["detail"])
+
+
+class TestStartup(unittest.TestCase):
+    def test_replace_earlier_instance_or_move_to_free_port(self):
+        from distortion_lab import server as S
+        tmp = tempfile.mkdtemp(prefix="dl-start-")
+        try:
+            h1 = S.make_server("127.0.0.1", 0, tmp)
+            port = h1.server_address[1]
+            h1.app.shutdown_token = "tok-123"
+            with open(S._runfile(tmp, port), "w") as f:
+                json.dump({"token": "tok-123"}, f)
+            t1 = threading.Thread(target=h1.serve_forever, daemon=True)
+            t1.start()
+            # wrong token is refused
+            r = urllib.request.Request("http://127.0.0.1:%d/api/shutdown" % port, data=b'{"token":"nope"}',
+                                       headers={"Content-Type": "application/json"}, method="POST")
+            with self.assertRaises(urllib.error.HTTPError) as cm:
+                urllib.request.urlopen(r, timeout=5)
+            self.assertEqual(cm.exception.code, 403)
+            # a new start replaces the earlier instance on the same port
+            h2, note = S.start_server("127.0.0.1", port, tmp)
+            t1.join(5)
+            self.assertFalse(t1.is_alive())
+            self.assertEqual(h2.server_address[1], port)
+            self.assertIn("Stopped an earlier", note)
+            # an instance that cannot be stopped (no token file, e.g. an older version): use the next free port
+            os.remove(S._runfile(tmp, port))
+            t2 = threading.Thread(target=h2.serve_forever, daemon=True)
+            t2.start()
+            h3, note = S.start_server("127.0.0.1", port, tmp)
+            self.assertNotEqual(h3.server_address[1], port)
+            self.assertIn("could not be stopped", note)
+            h3.server_close()
+            h2.shutdown()
+            h2.server_close()
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
