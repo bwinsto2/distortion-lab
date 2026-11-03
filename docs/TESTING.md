@@ -39,8 +39,8 @@ Environment: Linux, Python 3.13.18 and Python 3.9.25 (backend suite run under bo
 |---|---|
 | `tools/build_data.py --check` (generated browser data matches `shared/`) | up to date |
 | Python `unittest` (backend, model, AI bridge incl. Claude Code provider via a stand-in CLI, startup/port handling, renderer migration, presentation boundary, parity): 25 tests | **OK** under 3.13 and 3.9 |
-| Node core tests: 26 tests, plus MIDI controller decoding/learning: 5 tests | **31 pass, 0 fail** |
-| Browser end-to-end (Playwright/Chromium against the real backend): 20 steps | **20/20 pass** |
+| Node core tests: 30 tests (incl. nulling), plus MIDI controller decoding/learning: 5 tests | **35 pass, 0 fail** |
+| Browser end-to-end (Playwright/Chromium against the real backend): 21 steps | **21/21 pass** |
 
 ### What is covered
 
@@ -63,6 +63,7 @@ Environment: Linux, Python 3.13.18 and Python 3.9.25 (backend suite run under bo
 | Description capture is verbatim, with AI disconnected and offline | core; e2e (server without AI, and file:// browser-only mode) |
 | AI context excludes participant identity; AI operations are validated; the mock is labelled not-AI | core `AI context excludes…`; backend `TestMockAI`, `TestBridgeUnit`; e2e AI step |
 | Stimulus window mirrors the console; optics kept across form changes | e2e |
+| Nulling: reverse construction (bend displacement exactly negated; plaid = 2S − P before clipping; breaks/gaps reported), records, other-eye check, repeats, monocular fellow-eye nulling, stimulus roles, restore | core nulling tests; e2e nulling step |
 | Participant controls: eye switching, in-stereoscope menu, knob/press/mode/new alternatives/undo by keyboard (console and stimulus window), by mouse (wheel, left/right/middle click, hold) and by simulated MIDI messages including the setup steps | e2e; `tests/controller.test.js` for MIDI encodings. No physical controller was available, so real hardware is untested |
 | Browser-only fallback states what is unavailable | e2e |
 

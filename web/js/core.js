@@ -462,6 +462,12 @@
     if (s.actions.length > 2000000) fail('Action log too long');
     s.undo.concat(s.redo).forEach(function (e) { plainObject(e, 'history entry'); e.work = validateWork(e.work); });
     s.proposals.forEach(function (p) { plainObject(p, 'proposal set'); if (p.base) p.base = validateWork(p.base); });
+    if (s.nulls !== undefined && !Array.isArray(s.nulls)) fail('nulls must be an array');
+    if (s.task !== undefined && s.task !== null) {
+      plainObject(s.task, 'task');
+      if (s.task.kind !== 'null') fail('Unknown task ' + s.task.kind);
+      s.task.matchWork = validateWork(s.task.matchWork);
+    }
     s.descriptions.forEach(function (d) { plainObject(d, 'description'); str(d.text, 20000, 'description text'); });
     if (s.outcome !== null) {
       plainObject(s.outcome, 'outcome');
@@ -487,7 +493,7 @@
       settings: { proposalScale: 'coarse', sliderStep: 'fine', shrinkRepeated: true, shrinkFactor: 0.6,
         proposalCount: 4, includeAdvanced: false, revealedFamilies: [], showLabels: true },
       neighborhood: { round: 0, anchor: null },
-      proposals: [], descriptions: [], accepted: [], outcome: null,
+      proposals: [], descriptions: [], accepted: [], outcome: null, nulls: [], task: null,
       actions: [], provenance: { createdBy: 'Distortion Lab ' + VERSION }
     };
     log(s, 'session-created', { reference: reference });
@@ -952,6 +958,111 @@
     return true;
   }
 
+  // ---------------------------------------------------------------- nulling
+  /**
+   * Starting point for nulling: the "reverse" of a matched distortion, i.e. a stimulus that would look like the
+   * reference if the eye applied the same distortion again. Exact for the geometric operations under the stated
+   * assumptions (see docs/MODEL.md); a linear prediction (2S - P) for the original/plaid renderer; breaks and gaps
+   * cannot be reversed and are removed. Returns {recon, notes: [plain-language caveats]}.
+   */
+  function reverseRecon(recon, reference) {
+    var notes = [];
+    recon = validateRecon(recon);
+    if (recon.renderer === 'semantic-grating') {
+      var p = clone(recon.params), D = SEM_DEFS;
+      var set = function (k, v) { p[k] = quantize(D[k], D[k].periodic ? wrapPeriodic(D[k], v) : v); };
+      set('orientation', 2 * reference.orientation - p.orientation);
+      set('frequency', reference.frequency * reference.frequency / p.frequency);
+      set('phase', 2 * reference.phase - p.phase);
+      if (p.contrast > 0 && p.contrast < reference.contrast) { set('contrast', Math.min(1, reference.contrast * reference.contrast / p.contrast)); notes.push('Lower perceived contrast is compensated by raising contrast (capped at 1).'); }
+      else set('contrast', reference.contrast);
+      if (p.bendAmount > 0) set('bendPhase', p.bendPhase + 180);
+      if (p.zigAmount > 0) set('zigPhase', p.zigPhase + 180);
+      if (p.offsetAmount !== 0) set('offsetAmount', -p.offsetAmount);
+      if (p.crossStrength > 0) { set('crossPhase', p.crossPhase + 180); notes.push('Crossing lines are reversed by adding them in counter-phase; this only cancels if they add linearly.'); }
+      if (p.fragExtent > 0) { p.fragExtent = 0; notes.push('Breaks cannot be reversed (missing information); they are left out of the starting point.'); }
+      if (p.holeSize > 0) { p.holeSize = 0; notes.push('A gap cannot be reversed (missing information); it is left out of the starting point.'); }
+      if (p.sharpness > 0) { p.sharpness = 0; notes.push('Edge sharpness is reset to a plain sinusoid.'); }
+      return { recon: validateRecon({ renderer: recon.renderer, rendererVersion: recon.rendererVersion, params: p }), notes: notes };
+    }
+    // Original/plaid renderer: linear prediction N = 2S - P (each component negated by phase + 180 deg and duty -K).
+    var comps = recon.params.components.filter(function (c) { return c.enabled; });
+    if (comps.length + 1 > LEG.maxComponents) throw cannotApply('Too many components to build the reverse; start from the straight grating instead.');
+    var out = [{ id: 1, enabled: true, orientation: reference.orientation, frequency: reference.frequency, phase: reference.phase,
+      duty: 0, threshold: 1, weight: quantize(LEG_DEFS.weight, 2 * reference.contrast) }];
+    var sumW = 2 * reference.contrast, nonlinear = false;
+    comps.forEach(function (c, i) {
+      var w = quantize(LEG_DEFS.weight, c.weight * recon.params.contrast);
+      sumW += w * Math.min(1, c.threshold);
+      if (c.duty !== 0 || c.threshold < 1) nonlinear = true;
+      out.push({ id: i + 2, enabled: true, orientation: c.orientation, frequency: c.frequency,
+        phase: quantize(LEG_DEFS.phase, wrapPeriodic(LEG_DEFS.phase, c.phase + 180)), duty: quantize(LEG_DEFS.duty, -c.duty), threshold: c.threshold, weight: w });
+    });
+    notes.push('Linear prediction: straight grating plus (straight grating minus the matched picture).');
+    if (nonlinear) notes.push('The matched picture uses clipped components, so the reverse is only approximate.');
+    if (sumW > 1) notes.push('The reverse can exceed the display range and is clipped at full contrast.');
+    return { recon: validateRecon({ renderer: 'legacy-rectified', rendererVersion: LEG.version, params: { contrast: 1, components: out } }), notes: notes };
+  }
+  var NULL_STATUSES = ['nulled', 'not-nullable', 'unstable', 'cannot-tell'];
+  var NULL_CHECKS = ['opposite', 'straight', 'like-original', 'cannot-tell'];
+  /**
+   * Start (or repeat) nulling. opts: {adjEye: 'AE'|'FE', standard: 'other'|'none', start: 'reverse'|'straight',
+   * matchWork: the matched reconstruction to reverse (default: current work)}.
+   * The adjustable picture is shown to adjEye; the other eye sees the straight grating ('other') or nothing ('none').
+   */
+  function startNulling(s, opts) {
+    opts = opts || {};
+    var adjEye = opts.adjEye === 'FE' ? 'FE' : 'AE', standard = opts.standard === 'none' ? 'none' : 'other';
+    var start = opts.start === 'straight' ? 'straight' : 'reverse';
+    var matchWork = validateWork(clone(opts.matchWork || (s.task && s.task.kind === 'null' ? s.task.matchWork : s.work)));
+    var rev = start === 'reverse' ? reverseRecon(matchWork.recon, s.reference) : { recon: identityRecon(s.reference), notes: [] };
+    if (!s.nulls) s.nulls = [];
+    var key = JSON.stringify(matchWork.recon);
+    var repeat = s.nulls.filter(function (n) { return JSON.stringify(n.matchWork.recon) === key && n.adjEye === adjEye && n.standard === standard; }).length + 1;
+    s.task = { kind: 'null', adjEye: adjEye, standard: standard, start: start, check: false, repeat: repeat, notes: rev.notes,
+      matchWork: matchWork, startRecon: clone(rev.recon), startedAt: nowISO() };
+    commit(s, { recon: rev.recon, pins: [], origin: { type: 'null-start', start: start, adjEye: adjEye } },
+      { action: 'null-start', label: 'Start nulling (' + adjEye + ', ' + start + ')', detail: { adjEye: adjEye, standard: standard, start: start, repeat: repeat, notes: rev.notes } });
+    resetNeighborhood(s);
+    return s.task;
+  }
+  function recordNull(s, status, note) {
+    if (!s.task || s.task.kind !== 'null') fail('Not nulling');
+    if (NULL_STATUSES.indexOf(status) < 0) fail('Unknown nulling result ' + status);
+    var t = s.task;
+    var rec = { index: s.nulls.length + 1, time: nowISO(), status: status, note: typeof note === 'string' ? note.slice(0, 2000) : '',
+      adjEye: t.adjEye, standard: t.standard, start: t.start, repeat: t.repeat, startRecon: clone(t.startRecon), final: clone(s.work.recon),
+      matchWork: clone(t.matchWork), reference: clone(s.reference), layout: clone(s.layout), startNotes: t.notes.slice(),
+      renderer: s.work.recon.renderer, rendererVersion: s.work.recon.rendererVersion, softwareVersion: VERSION, otherEyeCheck: null };
+    s.nulls.push(rec);
+    log(s, 'null-recorded', { index: rec.index, status: status, adjEye: t.adjEye, standard: t.standard, start: t.start, repeat: t.repeat });
+    return rec;
+  }
+  /** Show the current null stimulus to the other eye (it should look distorted the opposite way). */
+  function setNullCheck(s, on) {
+    if (!s.task || s.task.kind !== 'null') fail('Not nulling');
+    s.task.check = !!on;
+    log(s, 'null-check-view', { on: !!on });
+  }
+  function recordNullCheck(s, response) {
+    if (NULL_CHECKS.indexOf(response) < 0) fail('Unknown check response ' + response);
+    var last = (s.nulls || [])[s.nulls.length - 1];
+    if (!last) fail('Record a nulling result first');
+    last.otherEyeCheck = { response: response, time: nowISO() };
+    log(s, 'null-check', { index: last.index, response: response });
+    return last;
+  }
+  /** Leave nulling; by default restore the matched reconstruction (one undoable step). */
+  function endNulling(s, restore) {
+    if (!s.task || s.task.kind !== 'null') return false;
+    var t = s.task;
+    s.task = null;
+    if (restore !== false) commit(s, { recon: clone(t.matchWork.recon), pins: t.matchWork.pins.slice(), origin: { type: 'null-end' } },
+      { action: 'null-end', label: 'Back to matching' });
+    log(s, 'null-ended', {});
+    return true;
+  }
+
   // ---------------------------------------------------------------- structured operations (AI bridge)
   /**
    * Validate a list of bounded operations [{path, op:'set'|'delta', value}] against the
@@ -1066,6 +1177,8 @@
     chooseGallery: chooseGallery, recordGalleryOutcome: recordGalleryOutcome,
     generateProposals: generateProposals, requestAlternatives: requestAlternatives, recordCandidates: recordCandidates, combine: combine, chooseCandidate: chooseCandidate, canChoose: canChoose,
     captureDescription: captureDescription, setOutcome: setOutcome, accept: accept, setReference: setReference, setLayout: setLayout, eyeRouting: eyeRouting,
-    applyOperations: applyOperations, aiContext: aiContext, importSession: importSession, devRequest: devRequest
+    applyOperations: applyOperations, aiContext: aiContext,
+    reverseRecon: reverseRecon, startNulling: startNulling, recordNull: recordNull, setNullCheck: setNullCheck, recordNullCheck: recordNullCheck, endNulling: endNulling,
+    NULL_STATUSES: NULL_STATUSES, NULL_CHECKS: NULL_CHECKS, importSession: importSession, devRequest: devRequest
   };
 });

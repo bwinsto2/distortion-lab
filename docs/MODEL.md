@@ -142,6 +142,32 @@ small, larger and oblique angles, interrupted, and wavy. They are built relative
 are our approximations, not the authors' values (`shared/parameters.json` → `gallery.plaids`). Each component's
 orientation, frequency, phase and weight (contrast) can then be adjusted, as in their 8-slider refinement.
 
+## Nulling (making it look straight)
+
+Matching asks what the test grating looks like to the amblyopic eye. **Nulling** asks which picture would look
+*straight* to an eye. The Nulling tab sets:
+
+- **Adjusted eye:** amblyopic or fellow.
+- **Standard:** a straight grating in the other eye, or **nothing**. With nothing, the other eye sees mid-grey and the
+  criterion is "looks straight". Use this when both eyes may be distorted, e.g. on psilocybin.
+- **Starting point:** a straight grating, or the **reverse** of a matched distortion (`reverseRecon` in `web/js/core.js`):
+
+| Matched feature | Reverse used as the starting point | When it can cancel |
+|---|---|---|
+| Tilt `θ`, spacing `f`, position `φ` | `2θ_ref − θ`, `f_ref² / f`, `2φ_ref − φ` | if the eye rotates, scales or shifts the stripes |
+| Bend, zigzag/steps | same amplitude, position + 180° (displacement `−d(v)`) | if the displacement is stable and tied to visual-field position (it depends only on position along the stripes) |
+| Offset | `−offsetAmount` | as above |
+| Crossing lines | same pattern in counter-phase | only if the extra pattern adds linearly |
+| Lower contrast | contrast `c_ref² / c` (≤ 1) | if contrast is scaled |
+| Breaks, gaps, edge sharpness | removed (reported) | cannot be reversed: missing information |
+| Original/plaid renderer | linear prediction `N = 2S − P`: the test grating at twice its contrast plus every matched component negated (phase + 180°, `K → −K`) | exact before the final ±1 clip if the eye were linear (e.g. Maruya et al.'s linear-filter account); approximate if components clip |
+
+Each repeat is recorded in `nulls` with: eye, standard, starting point, repeat number, the start and final pictures,
+the matched picture it came from, the result (*looks straight*, *can't be made straight*, *keeps changing*,
+*can't tell*) and an optional **other-eye check**. The check shows the null picture to the other eye, which should see
+it distorted the opposite way. Repeats alternate the starting point by default, to reduce bias towards the start.
+Ending nulling restores the matched reconstruction (undoable). No matching data is changed or removed.
+
 ## Proposals (comparison-driven refinement)
 
 Proposals are deterministic and seeded. They are not AI-generated images.

@@ -75,6 +75,11 @@ dials. In this mode, autosave goes only to the browser's local storage.
    (*matches, close, can't be matched, keeps changing, can't tell, can't see it*), ask the optional AI bridge, or export
    a development request. The current version is always preserved, and nothing forces a successful match.
 
+**Nulling** (researcher tab): find the picture that looks *straight* to the amblyopic or fellow eye, starting from
+the reverse of the matched distortion or from a straight grating, compared against a straight grating in the other eye
+or against nothing. Results, repeats and an other-eye check are recorded alongside the matches. See
+[docs/MODEL.md](docs/MODEL.md#nulling-making-it-look-straight).
+
 **Undo/Redo** (buttons, Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z) covers slider edits (each drag is one step), candidate choices,
 gallery choices, combinations, mixing, pins and component edits.
 

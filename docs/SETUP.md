@@ -92,3 +92,14 @@ M = mode (Choose / Adjust / Compare) · N = new alternatives · Z = undo.
 The researcher types the participant's description while they talk (*Still different?* tab), can ask for AI
 suggestions, add a feature type, pin something, record the outcome, and sees everything the participant sees in the
 stimulus preview. Optics, eye routing and calibration are kept when the form changes.
+
+## Nulling
+
+Console → **Nulling** tab: choose the eye to adjust, what it's compared against (a straight grating in the other eye,
+or nothing) and the starting point, then **Start nulling**. In the stereoscope the adjustable picture appears in that
+eye's half, with the menu below it (larger text when it's the amblyopic eye). The participant uses the same knob,
+mouse or keys (Adjust ↔ Compare) until it looks straight. Record the result, optionally run the other-eye check, then
+**Repeat** (the starting point alternates) or **End nulling** to go back to matching.
+
+Note on viewing with both eyes: in a mirror stereoscope the two halves are seen in the same direction, so the two
+eyes' pictures overlap and can rival. Switching eyes, or nulling against nothing, avoids that.

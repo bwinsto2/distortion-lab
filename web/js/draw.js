@@ -58,7 +58,20 @@
     var view = state.view || null;          // participant controls: {eye: 'AE'|'FE'|'both', overlay}
     var aeSide = L.referenceSide, feSide = aeSide === 'left' ? 'right' : 'left';
     var feOn = view && (view.eye === 'FE' || view.eye === 'both');
-    if (view) {
+    // Nulling task: the adjustable picture goes to the adjusted eye; the other eye sees the straight standard,
+    // nothing (monocular "looks straight" criterion), or - during the other-eye check - the null stimulus itself.
+    var task = state.task && state.task.kind === 'null' ? state.task : null;
+    var eyeOf = function (side) { return side === aeSide ? 'AE' : 'FE'; };
+    var shown = function (side) { return !view || view.eye === 'both' || view.eye === eyeOf(side); };
+    var menuSide = feSide;
+    if (task) {
+      var adjSide = task.adjEye === 'AE' ? aeSide : feSide, other = adjSide === 'left' ? 'right' : 'left';
+      if (task.check) roles[other] = 'reconstruction';
+      else { roles[adjSide] = 'reconstruction'; if (task.standard === 'other') roles[other] = 'reference'; }
+      ['left', 'right'].forEach(function (sd) { if (!shown(sd)) delete roles[sd]; });
+      menuSide = roles[adjSide] ? adjSide : (roles[other] ? other : feSide);
+      info.task = { adjSide: adjSide, roles: { left: roles.left || null, right: roles.right || null } };
+    } else if (view) {
       if (view.eye === 'AE' || view.eye === 'both') roles[aeSide] = 'reference';
       if (feOn && !view.ring) roles[feSide] = 'reconstruction';
     } else if (L.comparison === 'simultaneous') {
@@ -87,7 +100,11 @@
       }
     });
     var fs = Math.max(9, Math.min(30, 0.17 * L.ppd * scale));
-    if (feOn && view.ring) {
+    if (task) {
+      // Menu under the adjustable picture; larger when it is read by the amblyopic eye.
+      if (view && view.overlay && shown(menuSide))
+        drawOverlay(ctx, centers[menuSide][0], centers[menuSide][1], dCss / 2, menuSide === aeSide ? Math.min(40, fs * 1.4) : fs, view.overlay);
+    } else if (feOn && view.ring) {
       var ext = drawRing(ctx, centers[feSide][0], centers[feSide][1], dCss, dpr, geom, view.ring, feSide, W, H, fs);
       info.ringScale = ext.k;
       if (view.overlay) drawOverlay(ctx, centers[feSide][0], centers[feSide][1], ext.half, fs, view.overlay);

@@ -405,3 +405,77 @@ test('semantic-grating 1.0.0 reconstructions migrate to 1.1.0 with identical pix
   assert.equal(m.params.zigSide, 'whole');
   assert.deepEqual(render(old), render(m));
 });
+
+// ------------------------------------------------------------------ nulling
+test('reverse of a bend cancels the displacement; tilt and spacing are mirrored about the test grating', () => {
+  const ref = C.defaultReference();  // vertical stripes: u = -x, v = y
+  const m = semantic({ bendAmount: 0.1, bendSpacing: 1.0, bendPhase: 30, orientation: 100, frequency: 4.4, offsetAmount: 0.05 }, ref);
+  const r = C.reverseRecon(m, ref).recon;
+  assert.equal(r.params.bendPhase, 210);
+  assert.equal(r.params.orientation, 80);
+  assert.equal(r.params.frequency, 3.64);
+  assert.equal(r.params.offsetAmount, -0.05);
+  // displacement of the reverse is exactly the negative of the matched one
+  const only = semantic({ bendAmount: 0.1, bendSpacing: 1.0, bendPhase: 30 }, ref), rev = C.reverseRecon(only, ref).recon, id = C.identityRecon(ref);
+  for (const y of [0.1, 0.37, -0.6]) {
+    const d = 0.1 * Math.sin(2 * Math.PI * y / 1.0 + 30 * Math.PI / 180);
+    assert.ok(Math.abs(sample(rev, 0.21, y) - sample(id, 0.21 + d, y)) < 1e-9);
+  }
+});
+
+test('breaks and gaps cannot be reversed and are reported; crossing lines are counter-phased', () => {
+  const ref = C.defaultReference();
+  const out = C.reverseRecon(semantic({ holeSize: 0.5, fragExtent: 0.3, crossStrength: 0.5, crossPhase: 10 }, ref), ref);
+  assert.equal(out.recon.params.holeSize, 0);
+  assert.equal(out.recon.params.fragExtent, 0);
+  assert.equal(out.recon.params.crossPhase, 190);
+  assert.ok(out.notes.some((n) => /gap cannot/.test(n)) && out.notes.some((n) => /Breaks cannot/.test(n)));
+});
+
+test('plaid reverse is the linear prediction 2S - P (before the final clip)', () => {
+  const ref = C.defaultReference();
+  const P = C.galleryItem(ref, 'plaid:net').recon;
+  const out = C.reverseRecon(P, ref);
+  const S = C.referenceRecon(ref);
+  const sig = (r, x, y) => C.signalFor(r).f(x, y);
+  let checked = 0;
+  for (const [x, y] of [[0.1, 0.2], [0.33, -0.4], [-0.7, 0.05], [0.9, 0.9], [0, 0]]) {
+    const lin = 2 * sig(S, x, y) - P.params.contrast * sig(P, x, y);
+    if (Math.abs(lin) < 1) { assert.ok(Math.abs(sig(out.recon, x, y) - lin) < 1e-9); checked++; }
+  }
+  assert.ok(checked >= 2);
+  assert.ok(out.notes.some((n) => /clipped/.test(n)));
+});
+
+test('nulling: start, record, other-eye check, repeat, end; undoable and saved in the session', () => {
+  const s = C.newSession();
+  C.chooseGallery(s, 'bend:strong');
+  C.togglePin(s, 'bendSpacing');
+  const matched = J(s.work);
+  const t = C.startNulling(s, { adjEye: 'AE', standard: 'other', start: 'reverse' });
+  assert.equal(t.repeat, 1);
+  assert.equal(s.work.pins.length, 0, 'pins from matching do not carry into nulling');
+  assert.equal(s.work.recon.params.bendPhase, 180);
+  C.setParam(s, 'bendAmount', 0.12);
+  const rec = C.recordNull(s, 'nulled');
+  assert.equal(rec.final.params.bendAmount, 0.12);
+  assert.equal(J(rec.matchWork), matched);
+  C.setNullCheck(s, true); assert.equal(s.task.check, true);
+  C.recordNullCheck(s, 'opposite'); assert.equal(s.nulls[0].otherEyeCheck.response, 'opposite');
+  C.setNullCheck(s, false);
+  const t2 = C.startNulling(s, { adjEye: 'AE', standard: 'other', start: 'straight' });
+  assert.equal(t2.repeat, 2, 'repeat count for the same match');
+  assert.equal(J(s.work.recon), J(C.identityRecon(s.reference)));
+  C.recordNull(s, 'not-nullable');
+  const t3 = C.startNulling(s, { adjEye: 'FE', standard: 'none', start: 'straight' });
+  assert.equal(t3.repeat, 1, 'fellow eye, monocular criterion counts separately');
+  assert.throws(() => C.recordNull(s, 'success'));
+  C.validateSession(JSON.parse(J(s)));
+  C.endNulling(s);
+  assert.equal(s.task, null);
+  assert.equal(J({ recon: s.work.recon, pins: s.work.pins }), J({ recon: JSON.parse(matched).recon, pins: JSON.parse(matched).pins }), 'back to the matched reconstruction (pins restored)');
+  assert.equal(s.work.origin.type, 'null-end');
+  C.undo(s);
+  assert.equal(J(s.work.recon), J(C.identityRecon(s.reference)), 'end is undoable');
+  assert.equal(s.nulls.length, 2);
+});

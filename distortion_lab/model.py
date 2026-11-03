@@ -446,6 +446,13 @@ def validate_session(s):
         if s["outcome"].get("status") not in OUTCOMES:
             _fail("Invalid outcome status")
     _obj(s.get("settings"), "settings")
+    if "nulls" in s and not isinstance(s["nulls"], list):
+        _fail("nulls must be an array")
+    if s.get("task") is not None:
+        _obj(s["task"], "task")
+        if s["task"].get("kind") != "null":
+            _fail("Unknown task")
+        validate_work(s["task"].get("matchWork"))
     return s
 
 

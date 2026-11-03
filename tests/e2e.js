@@ -384,6 +384,49 @@ function post(port, p, body) {
     await stim.close();
   });
 
+  await step('nulling: reverse start, roles swapped, results, other-eye check, repeat, monocular fellow eye, end', async () => {
+    await page.evaluate(() => DistortionLab.chooseGallery('bend:strong'));
+    const matched = (await work()).recon;
+    const stim = await ctx.newPage();
+    await stim.goto(URL + 'stimulus.html');
+    await stim.waitForFunction(() => window.DistortionLabStimulus.getState() !== null);
+    await page.click('[data-tab=nulling]');
+    await page.selectOption('#nullEye', 'AE'); await page.selectOption('#nullStandard', 'other'); await page.selectOption('#nullStart', 'reverse');
+    await page.click('#nullGo');
+    const roles = () => stim.evaluate(() => (DistortionLabStimulus.getInfo() || {}).task);
+    await stim.waitForFunction(() => { const i = DistortionLabStimulus.getInfo(); return i && i.task; });
+    const s0 = await sess(), ae = s0.layout.referenceSide, fe = ae === 'left' ? 'right' : 'left';
+    let r = await roles();
+    assert(r.roles[ae] === 'reconstruction' && r.roles[fe] === 'reference', 'adjustable to amblyopic eye, straight grating to fellow eye: ' + J(r));
+    assert((await work()).recon.params.bendPhase === matched.params.bendPhase + 180, 'reverse start');
+    await shot('12-nulling');
+    await page.click('#nullResults [data-null=nulled]');
+    assert((await sess()).nulls.length === 1);
+    await page.click('#nullCheck');
+    await stim.waitForFunction((f) => { const i = DistortionLabStimulus.getInfo(); return i && i.task && i.task.roles[f] === 'reconstruction'; }, fe);
+    r = await roles();
+    assert(!r.roles[ae], 'other-eye check shows the null picture to the fellow eye only');
+    await page.click('#nullChecks [data-check=opposite]');
+    assert((await sess()).nulls[0].otherEyeCheck.response === 'opposite');
+    await page.click('#nullCheck');
+    await page.click('#nullRepeat');
+    let s1 = await sess();
+    assert(s1.task.repeat === 2 && s1.task.start === 'straight', 'repeat alternates the start');
+    await page.click('#nullEnd');
+    await page.selectOption('#nullEye', 'FE'); await page.selectOption('#nullStandard', 'none'); await page.selectOption('#nullStart', 'straight');
+    await page.click('#nullGo');
+    await stim.waitForFunction((f) => { const i = DistortionLabStimulus.getInfo(); return i && i.task && i.task.roles[f] === 'reconstruction'; }, fe);
+    r = await roles();
+    assert(!r.roles[ae], 'monocular: the other eye sees grey');
+    await page.click('#nullResults [data-null=unstable]');
+    await page.click('#nullEnd');
+    s1 = await sess();
+    assert(s1.task === null && J(s1.work.recon) === J(matched), 'matched reconstruction restored');
+    assert(s1.nulls.length === 2 && s1.nulls[1].adjEye === 'FE' && s1.nulls[1].standard === 'none');
+    await stim.waitForFunction(() => DistortionLabStimulus.getState().task === null);
+    await stim.close();
+  });
+
   await step('autosave to server and browser; reload offers resume and restores exact state', async () => {
     await page.evaluate(() => DistortionLab.saveNow());
     const s = await sess();

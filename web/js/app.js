@@ -145,8 +145,10 @@
     var pv = previewInfo(), showPv = pv && (ui.stereo.on || $('previewOnStim').checked);
     var recon = showPv ? pv.cand.recon : S.work.recon;
     return { type: 'state', reference: S.reference, recon: recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId, previewing: !!showPv,
-      view: ui.stereo.on ? { eye: ui.stereo.eye, overlay: stereoOverlay(), ring: ui.stereo.mode === 'choose' ? stereoRing() : null } : null };
+      view: ui.stereo.on ? { eye: ui.stereo.eye, overlay: stereoOverlay(), ring: ui.stereo.mode === 'choose' && !nulling() ? stereoRing() : null } : null,
+      task: nulling() ? { kind: 'null', adjEye: S.task.adjEye, standard: S.task.standard, check: !!S.task.check } : null };
   }
+  function nulling() { return !!(S && S.task && S.task.kind === 'null'); }
   function broadcast() {
     if (!S) return;
     var m = stimMessage();
@@ -171,7 +173,8 @@
     var pv = previewInfo();
     D.drawSingle(c, pv ? pv.cand.recon : S.work.recon, geom());
     $('previewBar').hidden = !pv;
-    $('reconTitle').textContent = pv ? 'Previewing ' + pv.letter + ' (not chosen)' : 'Current reconstruction';
+    $('reconTitle').textContent = pv ? 'Previewing ' + pv.letter + ' (not chosen)' :
+      (nulling() ? 'Nulling picture (shown to the ' + (S.task.adjEye === 'AE' ? 'amblyopic' : 'fellow') + ' eye)' : 'Current reconstruction');
     if (pv) {
       $('previewText').textContent = pv.choosable ? 'Previewing ' + pv.letter + '. Nothing has changed yet.' : 'Previewing ' + pv.letter + ' from an earlier set (Undo to choose it).';
       $('previewChoose').textContent = 'Choose ' + pv.letter;
@@ -192,7 +195,7 @@
     var W = Math.round(cssW * DPR), H = Math.round(cssH * DPR);
     if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
     var sm = stimMessage();
-    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: sm.recon, layout: S.layout, view: sm.view },
+    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: sm.recon, layout: S.layout, view: sm.view, task: sm.task },
       { scale: cssW / disp.w, labels: true, now: Date.now(), timing: { seqStart: ui.seqStart } });
     // Warnings are evaluated at full stimulus-window scale.
     var n = Math.max(8, Math.min(2048, Math.ceil(S.layout.diameter * S.layout.ppd * ((ui.display && ui.display.dpr) || 1))));
@@ -814,7 +817,10 @@
     return { items: items, highlight: st.lib % 8 };
   }
   function stereoOverlay() {
-    var st = ui.stereo, o = { title: st.mode === 'choose' ? 'CHOOSE THE CLOSEST' : (st.mode === 'adjust' ? 'ADJUST' : 'COMPARE'), lines: [],
+    var st = ui.stereo;
+    if (nulling() && st.mode === 'choose') st.mode = 'adjust';
+    var o = { title: nulling() ? (st.mode === 'adjust' ? 'ADJUST UNTIL STRAIGHT' : 'COMPARE: WHICH LOOKS STRAIGHTEST?') :
+      (st.mode === 'choose' ? 'CHOOSE THE CLOSEST' : (st.mode === 'adjust' ? 'ADJUST' : 'COMPARE')), lines: [],
       status: Date.now() < st.statusUntil ? st.status : '' };
     if (st.mode === 'choose') {
       var lib = stereoLibrary(), pages = Math.ceil(lib.length / 8);
@@ -854,7 +860,7 @@
     var sign = steps < 0 ? -1 : 1;
     if (action === 'eye') { st.eye = st.eye === 'AE' ? 'FE' : (st.eye === 'FE' ? 'both' : 'AE'); }
     else if (action === 'mode') {
-      st.mode = st.mode === 'choose' ? 'adjust' : (st.mode === 'adjust' ? 'compare' : 'choose');
+      st.mode = nulling() ? (st.mode === 'adjust' ? 'compare' : 'adjust') : (st.mode === 'choose' ? 'adjust' : (st.mode === 'adjust' ? 'compare' : 'choose'));
       if (st.mode !== 'compare') ui.preview = null;
     }
     else if (st.mode === 'choose' && (action === 'value' || action === 'select')) {
@@ -878,7 +884,8 @@
     else if (st.mode === 'choose' && action === 'alts') { stereoFlash('Choose a starting picture first'); }
     else if (action === 'select') { st.ctl += sign; }
     else if (action === 'value') {
-      if (st.eye === 'AE') stereoFlash('Switch to the fellow eye to adjust');
+      var adjEye = nulling() ? S.task.adjEye : 'FE';
+      if (st.eye !== 'both' && st.eye !== adjEye) stereoFlash('Switch to the ' + (adjEye === 'AE' ? 'amblyopic' : 'fellow') + ' eye to adjust');
       else if (st.mode === 'adjust') {
         var list = stereoControls(), cur = list.length ? list[((st.ctl % list.length) + list.length) % list.length] : null;
         if (!cur) { /* nothing */ }
@@ -984,6 +991,60 @@
   }
   function startLearn() { midi.learn = { i: 0, buf: [], map: {}, msg: '' }; learnPrompt(); }
 
+  // ------------------------------------------------------------------ nulling
+  var NULL_LABELS = { nulled: 'looks straight', 'not-nullable': "can't be made straight", unstable: 'keeps changing', 'cannot-tell': "can't tell" };
+  var CHECK_LABELS = { opposite: 'other eye: opposite distortion', straight: 'other eye: also straight', 'like-original': 'other eye: like the original', 'cannot-tell': "other eye: can't tell" };
+  function syncNulling() {
+    var on = nulling(), t = S.task;
+    $('nullSetup').hidden = on; $('nullActive').hidden = !on;
+    var src = $('nullSource'), opts = [['current', 'Current reconstruction']].concat(S.accepted.map(function (a) { return ['acc' + a.index, 'Accepted record #' + a.index + ' (' + a.status + ')']; }));
+    var key = JSON.stringify(opts);
+    if (src.dataset.key !== key) { var cur = src.value; src.replaceChildren.apply(src, opts.map(function (o) { return el('option', { value: o[0], text: o[1] }); })); src.dataset.key = key; if (opts.some(function (o) { return o[0] === cur; })) src.value = cur; }
+    $('nullStatus').textContent = on ? 'Nulling the ' + (t.adjEye === 'AE' ? 'amblyopic' : 'fellow') + ' eye · ' +
+      (t.standard === 'other' ? 'compared with a straight grating in the other eye' : 'until it looks straight (other eye sees grey)') +
+      ' · started from ' + (t.start === 'reverse' ? 'the reverse of the match' : 'a straight grating') + ' · repeat ' + t.repeat +
+      (t.check ? ' · NOW SHOWING THIS PICTURE TO THE OTHER EYE' : '') : 'Not nulling. The participant is matching.';
+    if (on) { $('nullNotes').textContent = t.notes.length ? 'Starting point: ' + t.notes.join(' ') : ''; $('nullCheck').textContent = t.check ? 'Back to the adjusted eye' : 'Show this picture to the other eye'; }
+    var box = $('nullList'); box.replaceChildren();
+    (S.nulls || []).slice().reverse().forEach(function (n) {
+      box.append(el('div', { text: '#' + n.index + ' · ' + (n.adjEye === 'AE' ? 'amblyopic' : 'fellow') + ' eye · ' + (n.standard === 'other' ? 'vs straight grating' : 'monocular') +
+        ' · from ' + n.start + ' · repeat ' + n.repeat + ' · ' + NULL_LABELS[n.status] + (n.otherEyeCheck ? ' · ' + CHECK_LABELS[n.otherEyeCheck.response] : '') + ' · ' + time(n.time) }));
+    });
+  }
+  function nullStartFromUI() {
+    var srcv = $('nullSource').value, matchWork = null;
+    if (nulling()) matchWork = S.task.matchWork;
+    else if (srcv.indexOf('acc') === 0) { var a = S.accepted.filter(function (x) { return 'acc' + x.index === srcv; })[0]; matchWork = a && a.work; }
+    var t = act(function () { return C.startNulling(S, { adjEye: $('nullEye').value, standard: $('nullStandard').value, start: $('nullStart').value, matchWork: matchWork }); });
+    if (t && ui.stereo.on) { ui.stereo.mode = 'adjust'; ui.stereo.eye = t.adjEye; ui.stereo.ctl = 0; stereoFlash('Adjust until it looks straight'); broadcast(); }
+    if (t) toast('Nulling started (repeat ' + t.repeat + ').');
+  }
+  $('nullGo').addEventListener('click', nullStartFromUI);
+  $('nullRepeat').addEventListener('click', function () {
+    // Repeat with the same eye and standard; the start alternates unless changed in the setup box.
+    $('nullEye').value = S.task.adjEye; $('nullStandard').value = S.task.standard;
+    $('nullStart').value = S.task.start === 'reverse' ? 'straight' : 'reverse';
+    nullStartFromUI();
+  });
+  $('nullEnd').addEventListener('click', function () {
+    act(function () { return C.endNulling(S, true); });
+    if (ui.stereo.on) { ui.stereo.mode = 'adjust'; ui.stereo.eye = 'FE'; broadcast(); }
+    toast('Back to matching. The matched reconstruction is restored.');
+  });
+  document.querySelectorAll('#nullResults [data-null]').forEach(function (b) { b.addEventListener('click', function () {
+    var r = act(function () { return C.recordNull(S, b.dataset.null); });
+    if (r) toast('Recorded nulling result #' + r.index + ': ' + NULL_LABELS[r.status] + '.');
+  }); });
+  $('nullCheck').addEventListener('click', function () {
+    var on = !S.task.check;
+    act(function () { C.setNullCheck(S, on); });
+    if (ui.stereo.on) { ui.stereo.eye = on ? (S.task.adjEye === 'AE' ? 'FE' : 'AE') : S.task.adjEye; broadcast(); }
+  });
+  document.querySelectorAll('#nullChecks [data-check]').forEach(function (b) { b.addEventListener('click', function () {
+    var r = act(function () { return C.recordNullCheck(S, b.dataset.check); });
+    if (r) toast('Recorded for nulling result #' + r.index + '.');
+  }); });
+
   // ------------------------------------------------------------------ tabs, refresh
   function switchTab(t) {
     if (t !== ui.tab && ui.preview) { ui.preview = null; broadcast(); }
@@ -997,6 +1058,7 @@
     if (!S) return;
     $('sessionPill').textContent = ui.pendingResume ? 'No session' : sessionLabel(S);
     syncStereo();
+    syncNulling();
     $('undo').disabled = !S.undo.length; $('redo').disabled = !S.redo.length;
     $('undo').title = S.undo.length ? 'Undo: ' + S.undo[S.undo.length - 1].label : 'Nothing to undo';
     $('redo').title = S.redo.length ? 'Redo: ' + S.redo[S.redo.length - 1].label : 'Nothing to redo';
@@ -1023,7 +1085,7 @@
   $('participantMode').addEventListener('change', function (e) {
     document.body.classList.toggle('participant', e.target.checked);
     C.log(S, 'participant-layout', { on: e.target.checked });
-    if (e.target.checked && (ui.tab === 'experimenter' || ui.tab === 'records')) switchTab('gallery'); else refresh();
+    if (e.target.checked && (ui.tab === 'experimenter' || ui.tab === 'records' || ui.tab === 'nulling')) switchTab('gallery'); else refresh();
   });
   $('openStimulus').addEventListener('click', function () {
     ui.stimWin = window.open('stimulus.html', 'distortion-lab-stimulus', 'popup,width=1280,height=800');

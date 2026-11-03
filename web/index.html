@@ -92,6 +92,7 @@
       <button role="tab" data-tab="adjust">2 · Adjust</button>
       <button role="tab" data-tab="alternatives">3 · Compare</button>
       <button role="tab" data-tab="describe">Still different?</button>
+      <button role="tab" data-tab="nulling" class="researcher">Nulling</button>
       <button role="tab" data-tab="experimenter" class="researcher">Experimenter</button>
       <button role="tab" data-tab="records" class="researcher">Records</button>
     </nav>
@@ -192,6 +193,53 @@
       </div>
       <div id="outcomeInfo" class="muted"></div>
       <div id="descList" class="list"></div>
+    </div>
+
+    <!-- Nulling -->
+    <div class="tab researcher" id="tab-nulling" hidden>
+      <p class="lead">Nulling: adjust a picture until it looks <em>straight</em> to one eye. The starting point can be the reverse of the matched distortion.</p>
+      <div id="nullStatus" class="resume-box"></div>
+      <div id="nullSetup">
+        <div class="form">
+          <label>Eye that is adjusted
+            <select id="nullEye"><option value="AE">Amblyopic eye</option><option value="FE">Fellow eye</option></select></label>
+          <label>Compared against
+            <select id="nullStandard"><option value="other">A straight grating in the other eye</option><option value="none">Nothing: adjust until it looks straight (other eye sees grey)</option></select></label>
+          <label>Start from
+            <select id="nullStart"><option value="reverse">Reverse of the matched distortion</option><option value="straight">Straight grating (no correction)</option></select></label>
+          <label>Matched picture to reverse
+            <select id="nullSource"></select></label>
+        </div>
+        <div class="row"><button id="nullGo" class="primary">Start nulling</button></div>
+        <p class="note">Use "Nothing" when the other eye may also be distorted (e.g. on psilocybin). Alternate the starting point across repeats so the result doesn't simply stay near where it started. Matching data and records are kept; Undo works throughout.</p>
+      </div>
+      <div id="nullActive" hidden>
+        <p id="nullNotes" class="note"></p>
+        <h3>Result of this repeat</h3>
+        <div class="row wrap" id="nullResults">
+          <button data-null="nulled" class="primary">Looks straight (null found)</button>
+          <button data-null="not-nullable">Can't be made straight</button>
+          <button data-null="unstable">Keeps changing</button>
+          <button data-null="cannot-tell">Can't tell</button>
+        </div>
+        <h3>Check with the other eye</h3>
+        <div class="row wrap">
+          <button id="nullCheck">Show this picture to the other eye</button>
+          <span class="muted">It should look distorted the opposite way.</span>
+        </div>
+        <div class="row wrap" id="nullChecks">
+          <button data-check="opposite">Looks distorted the opposite way</button>
+          <button data-check="straight">Also looks straight</button>
+          <button data-check="like-original">Looks like the original distortion</button>
+          <button data-check="cannot-tell">Can't tell</button>
+        </div>
+        <div class="row wrap">
+          <button id="nullRepeat">Repeat (start again)</button>
+          <button id="nullEnd">End nulling and return to matching</button>
+        </div>
+      </div>
+      <h3>Nulling results</h3>
+      <div id="nullList" class="list"></div>
     </div>
 
     <!-- Experimenter -->
