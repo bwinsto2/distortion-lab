@@ -72,6 +72,42 @@ function post(port, p, body) {
     await shot('01-gallery');
   });
 
+  await step('alignment runs after the start screen (fusion box, nonius, lab-battery keys) and side-by-side layout', async () => {
+    assert(await page.evaluate(() => DistortionLab.alignState() !== null), 'alignment started automatically');
+    const stim = await ctx.newPage();
+    await stim.goto(URL + 'stimulus.html');
+    await stim.waitForFunction(() => DistortionLabStimulus.getState() && DistortionLabStimulus.getState().align);
+    const L0 = (await sess()).layout;
+    assert(L0.fusionBox && L0.boxSepX === 9 && L0.boxSize === 15, J(L0));
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.keyboard.press('ArrowRight');                 // boxes apart by 0.05 deg
+    await page.keyboard.press('ArrowUp');                    // right box up / left box down by 0.05 deg
+    await stim.keyboard.press('r'); await stim.keyboard.press('9'); await stim.keyboard.press('9');   // keys from the stimulus window
+    await page.waitForFunction(() => DistortionLab.getSession().layout.rotRight === 2);
+    await page.keyboard.press('6');                          // lower the right eye's contrast
+    let L = (await sess()).layout;
+    assert(Math.abs(L.boxSepX - 9.05) < 1e-9 && Math.abs(L.boxSepY - 0.05) < 1e-9 && L.rotRight === 2 && Math.abs(L.calContrastRight - 0.95) < 1e-9, J(L));
+    await page.keyboard.press('4');                          // restores the right eye first
+    assert(Math.abs((await sess()).layout.calContrastRight - 1) < 1e-9);
+    if (SHOTS) { await stim.evaluate(() => document.getElementById('bar').style.display = 'none'); await page.evaluate(() => DistortionLab.setLayout('ppd', 40)); await stim.waitForTimeout(300); await stim.screenshot({ path: path.join(SHOTS, '13-alignment.png') }); }
+    await page.keyboard.press('Enter');
+    assert(await page.evaluate(() => DistortionLab.alignState() === null), 'accepted');
+    const acc = (await sess()).actions.filter((a) => a.type === 'alignment-accepted').pop();
+    assert(acc && Math.abs(acc.boxSepX - 9.05) < 1e-9 && acc.rotRight === 2, J(acc));
+    await stim.waitForFunction(() => !DistortionLabStimulus.getState().align);
+    // side by side: test grating left of fixation (amblyopic eye's half), match right of fixation (fellow eye's half)
+    const info = await stim.evaluate(() => DistortionLabStimulus.getInfo());
+    const ae = L.referenceSide, fe = ae === 'left' ? 'right' : 'left';
+    assert(info.boxed && info.items[ae][0].role === 'reference' && info.items[ae][0].x === -3 && info.items[fe][0].role === 'reconstruction' && info.items[fe][0].x === 3, J(info.items));
+    if (SHOTS) { await page.evaluate(() => DistortionLab.chooseGallery('bend:strong')); await stim.waitForTimeout(300); await stim.screenshot({ path: path.join(SHOTS, '14-side-by-side.png') }); await page.evaluate(() => { DistortionLab.setLayout('ppd', 80); DistortionLab.chooseGallery('reference'); }); }
+    await page.click('[data-tab=experimenter]');
+    await page.click('#alignGo');                             // can be rerun any time
+    assert(await page.evaluate(() => DistortionLab.alignState() !== null));
+    await page.evaluate(() => DistortionLab.alignKey('Enter'));
+    await page.click('[data-tab=gallery]');
+    await stim.close();
+  });
+
   await step('gallery choice sets the reconstruction', async () => {
     await page.click('[data-id="bend:strong"]');
     const w = await work();

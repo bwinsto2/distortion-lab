@@ -453,7 +453,7 @@
     str(s.createdAt, 40, 'createdAt'); str(s.updatedAt, 40, 'updatedAt');
     str(s.participant, 120, 'participant'); str(s.condition, 120, 'condition'); str(s.notes, 20000, 'notes');
     validateReference(s.reference);
-    validateLayout(s.layout);
+    s.layout = validateLayout(s.layout, { fillDefaults: true });   // older sessions lack newer layout fields
     s.work = validateWork(s.work);   // also normalises key order so JSON comparisons are stable
     ['undo', 'redo', 'proposals', 'descriptions', 'accepted', 'actions'].forEach(function (k) {
       if (!Array.isArray(s[k])) fail(k + ' must be an array');
@@ -948,13 +948,13 @@
       layout.rightEye = layout.referenceSide === 'right' ? 'AE' : 'FE';
     }
   }
-  function setLayout(s, key, value) {
+  function setLayout(s, key, value, opts) {
     var next = clone(s.layout); next[key] = value;
-    next = validateLayout(next);
+    next = validateLayout(next, { fillDefaults: true });
     eyeRouting(next);
     if (JSON.stringify(next) === JSON.stringify(s.layout)) return false;
     s.layout = next;
-    log(s, 'layout', { key: key, value: value });
+    if (!(opts && opts.quiet)) log(s, 'layout', { key: key, value: value });
     return true;
   }
 

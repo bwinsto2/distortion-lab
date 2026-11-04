@@ -98,6 +98,11 @@ gallery choices, combinations, mixing, pins and component edits.
 presentation. It draws exactly what the console sends and has no controls. Screen position does not isolate the eyes;
 the stereoscope does.
 
+**Fusion box and alignment** (on by default): the same checkered fusion box and nonius fixation as the lab's
+PsychoPy binocular battery, an alignment step after each new session (arrow keys, contrast, per-eye rotation, Enter to
+accept), and **side-by-side** placement so the test and match appear next to each other after fusion. Details:
+[docs/SETUP.md](docs/SETUP.md#fusion-box-nonius-fixation-and-alignment-from-the-lab-battery).
+
 **Participant controls in the stereoscope** (Experimenter tab): participants switch between amblyopic-eye and
 fellow-eye views with a button. They adjust or compare with a USB MIDI controller (knobs and buttons), a mouse (scroll wheel and buttons) or the keyboard,
 using a small menu drawn in the fellow-eye half below the reconstruction. Lab setup with a Linux desktop, two monitors

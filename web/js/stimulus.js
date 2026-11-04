@@ -14,7 +14,8 @@
     if (!m || m.type !== 'state') return;
     try {
       state = { reference: C.validateReference(m.reference), recon: C.validateRecon(m.recon), layout: C.validateLayout(m.layout), seqStart: m.seqStart || 0,
-        view: sanitizeView(m.view), task: sanitizeTask(m.task) };
+        view: sanitizeView(m.view), task: sanitizeTask(m.task),
+        align: m.align && typeof m.align === 'object' ? { selected: m.align.selected === 'left' || m.align.selected === 'right' ? m.align.selected : null } : null };
       document.getElementById('status').textContent = 'linked · ' + state.recon.renderer + ' · session ' + String(m.sessionId).slice(0, 8);
     } catch (e) { document.getElementById('status').textContent = 'rejected invalid state: ' + e.message; return; }
     request();
@@ -61,7 +62,10 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'f' || e.key === 'F') { present(!document.body.classList.contains('present')); return; }
     if (e.key === 'Escape') { present(false); return; }
-    // Participant controls typed in this window are forwarded to the console, which owns the state.
+    // Alignment keys (as in the lab battery) and participant controls typed here go to the console, which owns the state.
+    if (state && state.align && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '4', '6', 'l', 'L', 'r', 'R', '7', '9', '0', 'Enter'].indexOf(e.key) >= 0) {
+      e.preventDefault(); send({ type: 'alignKey', key: e.key }); return;
+    }
     if (state && state.view && window.DLController && DLController.keyAction(e.key, e.shiftKey)) {
       e.preventDefault();
       send({ type: 'key', key: e.key, shift: e.shiftKey });
@@ -69,10 +73,16 @@
   });
   // ---- Mouse as a participant controller (participant controls on): wheel = knob, buttons = actions.
   // The pointer is locked to this window on the first click so the wheel keeps reaching it; Esc releases it.
-  var wheelAcc = 0, holdTimer = null, held = false;
+  var wheelAcc = 0, holdTimer = null, held = false, skipUp = false;
   function action(a, steps) { send({ type: 'action', action: a, steps: steps || 1 }); }
   function active() { return state && state.view; }
   canvas.addEventListener('wheel', function (e) {
+    if (state && state.align) {                          // alignment: scroll = apart/together, Shift+scroll = vertical
+      e.preventDefault();
+      var up = (e.deltaY || e.deltaX) < 0;
+      send({ type: 'alignKey', key: e.shiftKey ? (up ? 'ArrowUp' : 'ArrowDown') : (up ? 'ArrowRight' : 'ArrowLeft') });
+      return;
+    }
     if (!active()) return;
     e.preventDefault();
     var px = e.deltaMode === 1 ? e.deltaY * 40 : (e.deltaMode === 2 ? e.deltaY * 800 : e.deltaY);
@@ -86,6 +96,7 @@
     }
   }, { passive: false });
   canvas.addEventListener('mousedown', function (e) {
+    if (state && state.align) { e.preventDefault(); if (e.button === 0) { send({ type: 'alignKey', key: 'Enter' }); skipUp = true; } return; }
     if (!active()) return;
     e.preventDefault();
     if (canvas.requestPointerLock && document.pointerLockElement !== canvas) { try { var p = canvas.requestPointerLock(); if (p && p.catch) p.catch(function () {}); } catch (err) { /* optional */ } }
@@ -96,6 +107,7 @@
     else if (e.button === 4) action('alts');
   });
   canvas.addEventListener('mouseup', function (e) {
+    if (skipUp) { skipUp = false; return; }               // the click that accepted alignment is not a "press"
     if (!active() || e.button !== 0) return;
     clearTimeout(holdTimer);
     if (!held) action('press');

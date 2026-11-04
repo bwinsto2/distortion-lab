@@ -90,6 +90,15 @@
     "toggleShowing": [
      "reference",
      "reconstruction"
+    ],
+    "fixationStyle": [
+     "nonius",
+     "cross",
+     "none"
+    ],
+    "testSide": [
+     "left",
+     "right"
     ]
    },
    "numbers": {
@@ -128,11 +137,61 @@
      "max": 10000,
      "default": 1000,
      "unit": "ms per alternation"
+    },
+    "boxSize": {
+     "min": 5,
+     "max": 30,
+     "default": 15,
+     "unit": "° (viewing area inside the checkered border)"
+    },
+    "boxSepX": {
+     "min": 1,
+     "max": 30,
+     "default": 9,
+     "unit": "° from screen centre to each box centre (horizontal)"
+    },
+    "boxSepY": {
+     "min": -10,
+     "max": 10,
+     "default": 0,
+     "unit": "° vertical: right box up / left box down"
+    },
+    "rotLeft": {
+     "min": -45,
+     "max": 45,
+     "default": 0,
+     "unit": "° clockwise rotation of the left-eye image"
+    },
+    "rotRight": {
+     "min": -45,
+     "max": 45,
+     "default": 0,
+     "unit": "° clockwise rotation of the right-eye image"
+    },
+    "calContrastLeft": {
+     "min": 0,
+     "max": 1,
+     "default": 1,
+     "unit": "left-eye contrast during alignment"
+    },
+    "calContrastRight": {
+     "min": 0,
+     "max": 1,
+     "default": 1,
+     "unit": "right-eye contrast during alignment"
+    },
+    "sideOffset": {
+     "min": 0,
+     "max": 7,
+     "default": 3,
+     "unit": "° from fixation to each stimulus centre (side by side)"
     }
    },
    "booleans": {
     "linked": false,
-    "fixation": false
+    "fixation": false,
+    "fusionBox": true,
+    "sideBySide": true
    },
    "defaults": {
     "referenceSide": "left",
@@ -142,8 +201,11 @@
     "visibility": "both",
     "comparison": "simultaneous",
     "comparisonSide": "left",
-    "toggleShowing": "reference"
-   }
+    "toggleShowing": "reference",
+    "fixationStyle": "nonius",
+    "testSide": "left"
+   },
+   "fusionNotes": "Fusion box, nonius fixation and alignment follow FixBorders() in the lab's PsychoPy battery (Functions_BinocularBattery.py; per-eye rotation from BinocularDisplay.py): 15 x 15 deg viewing area, 0.5 deg black/white border pieces (4 per horizontal side, 5 per vertical side), box centres +/-9 deg, 2 x 0.2 deg nonius bars (right eye vertical, left eye horizontal), 1 deg-radius circle, 0.05 deg / 1 deg / 0.05 contrast adjustment steps."
   },
   "renderers": {
    "semantic-grating": {

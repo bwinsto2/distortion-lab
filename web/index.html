@@ -312,6 +312,21 @@
         <label>Comparison position <select id="lay-comparisonSide"><option>left</option><option>right</option></select></label>
         <label>Alternation (ms) <input id="lay-sequenceMs" type="number" step="50" min="100" max="10000"></label>
       </div>
+      <h3>Fusion box, fixation and side-by-side layout</h3>
+      <div class="form">
+        <label><input type="checkbox" id="lay-fusionBox"> Fusion box (checkered border in both eyes)</label>
+        <label><input type="checkbox" id="lay-sideBySide"> Side by side (test and match next to each other)</label>
+        <label>Box size (°) <input id="lay-boxSize" type="number" step="0.5" min="5" max="30"></label>
+        <label>Box centres from screen centre (°) <input id="lay-boxSepX" type="number" step="0.05" min="1" max="30"></label>
+        <label>Box vertical (°, right up / left down) <input id="lay-boxSepY" type="number" step="0.05" min="-10" max="10"></label>
+        <label>Left-eye rotation (°, clockwise +) <input id="lay-rotLeft" type="number" step="1" min="-45" max="45"></label>
+        <label>Right-eye rotation (°, clockwise +) <input id="lay-rotRight" type="number" step="1" min="-45" max="45"></label>
+        <label>Stimulus offset from fixation (°) <input id="lay-sideOffset" type="number" step="0.1" min="0" max="7"></label>
+        <label>Test grating appears <select id="lay-testSide"><option value="left">left of fixation</option><option value="right">right of fixation</option></select></label>
+        <label>Fixation <select id="lay-fixationStyle"><option value="nonius">nonius: horizontal (left eye) / vertical (right eye) + circle</option><option value="cross">full cross + circle (both eyes)</option><option value="none">none</option></select></label>
+      </div>
+      <div class="row wrap"><button id="alignGo" class="primary">Run alignment</button><span id="alignInfo" class="muted"></span></div>
+      <p class="note">Alignment follows the lab battery (FixBorders): the participant uses ← → to move the boxes apart/together, ↑ ↓ to move them vertically, 4 / 6 to lower one eye's contrast, L or R then 7 / 9 to rotate that eye's image by 1°, 0 to reset and Enter to accept. In the stimulus window, the mouse also works: scroll moves the boxes apart or together, Shift+scroll moves them vertically, and a click accepts. Alignment runs automatically after a new session starts while the fusion box is on. With the fusion box on, "Centre separation" and "Right panel vertical offset" above are not used.</p>
       <div class="row"><button id="toggleShowing">Toggle shown stimulus</button><span id="toggleInfo" class="muted"></span></div>
       <p class="note">Screen positions do not isolate the eyes: the mirror stereoscope does. Eye labels are metadata recorded with the session. Pixels per degree is nominal until measured through the stereoscope; no gamma or timing calibration is provided. Sequential/toggle modes show reference and reconstruction alternately at one position (one eye's channel).</p>
       <details><summary>Nominal visual-angle calculator</summary>

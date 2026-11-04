@@ -13,7 +13,7 @@
   var backend = false, aiStatus = { provider: 'none', connected: false, label: 'AI off', detail: '' };
   var ui = { tab: 'gallery', selectedComponent: null, multi: false, multiSel: [], comboSet: null, currentSet: null, marking: false,
     region: null, structureKey: null, galleryKey: null, seqStart: Date.now(), stimWin: null, display: null, pendingResume: false,
-    preview: null, stereo: { on: false, eye: 'both', mode: 'choose', ctl: 0, lib: 0, status: '', statusUntil: 0 },
+    preview: null, align: null, stereo: { on: false, eye: 'both', mode: 'choose', ctl: 0, lib: 0, status: '', statusUntil: 0 },
     descContext: 'still-different', saveState: { local: null, server: null, error: null }, lastDesc: null, aiSet: null };
   var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('distortion-lab-v2') : null;
 
@@ -91,7 +91,10 @@
     controllerAction: function (action, steps) { return stereoAction(action, steps === undefined ? 1 : steps, 'api'); },
     midiMessage: function (bytes) { midiMessage(bytes); },
     startControllerSetup: function () { startLearn(); },
-    stereoState: function () { return C.util.clone(ui.stereo); }
+    stereoState: function () { return C.util.clone(ui.stereo); },
+    startAlignment: function () { startAlignment(); },
+    alignKey: function (k) { return alignKey(k); },
+    alignState: function () { return C.util.clone(ui.align); }
   };
   window.DistortionLab = Lab;
 
@@ -146,7 +149,8 @@
     var recon = showPv ? pv.cand.recon : S.work.recon;
     return { type: 'state', reference: S.reference, recon: recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId, previewing: !!showPv,
       view: ui.stereo.on ? { eye: ui.stereo.eye, overlay: stereoOverlay(), ring: ui.stereo.mode === 'choose' && !nulling() ? stereoRing() : null } : null,
-      task: nulling() ? { kind: 'null', adjEye: S.task.adjEye, standard: S.task.standard, check: !!S.task.check } : null };
+      task: nulling() ? { kind: 'null', adjEye: S.task.adjEye, standard: S.task.standard, check: !!S.task.check } : null,
+      align: ui.align ? { selected: ui.align.selected } : null };
   }
   function nulling() { return !!(S && S.task && S.task.kind === 'null'); }
   function broadcast() {
@@ -159,6 +163,7 @@
     if (!m || typeof m !== 'object') return;
     if (m.type === 'hello') broadcast();
     if (m.type === 'display' && typeof m.w === 'number') { ui.display = { w: m.w, h: m.h, dpr: m.dpr, fullscreen: !!m.fullscreen }; drawPreview(); }
+    if (m.type === 'alignKey' && typeof m.key === 'string') { alignKey(m.key); return; }
     if (m.type === 'key' && typeof m.key === 'string') { var a = K.keyAction(m.key, !!m.shift); if (a) stereoAction(a.action, a.steps, 'keyboard'); }
     if (m.type === 'action' && K.ACTIONS.some(function (x) { return x.id === m.action; }) && typeof m.steps === 'number' && Math.abs(m.steps) <= 20)
       stereoAction(m.action, m.steps, 'mouse');
@@ -195,7 +200,7 @@
     var W = Math.round(cssW * DPR), H = Math.round(cssH * DPR);
     if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
     var sm = stimMessage();
-    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: sm.recon, layout: S.layout, view: sm.view, task: sm.task },
+    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: sm.recon, layout: S.layout, view: sm.view, task: sm.task, align: sm.align },
       { scale: cssW / disp.w, labels: true, now: Date.now(), timing: { seqStart: ui.seqStart } });
     // Warnings are evaluated at full stimulus-window scale.
     var n = Math.max(8, Math.min(2048, Math.ceil(S.layout.diameter * S.layout.ppd * ((ui.display && ui.display.dpr) || 1))));
@@ -589,15 +594,21 @@
   });
 
   // ------------------------------------------------------------------ experimenter
-  var LAYOUT_NUM = ['diameter', 'sigma', 'ppd', 'separation', 'vertical', 'sequenceMs'];
-  var LAYOUT_SEL = ['referenceSide', 'leftEye', 'rightEye', 'aperture', 'comparison', 'comparisonSide'];
-  var LAYOUT_BOOL = ['linked', 'fixation'];
+  var LAYOUT_NUM = ['diameter', 'sigma', 'ppd', 'separation', 'vertical', 'sequenceMs', 'boxSize', 'boxSepX', 'boxSepY', 'rotLeft', 'rotRight', 'sideOffset'];
+  var LAYOUT_SEL = ['referenceSide', 'leftEye', 'rightEye', 'aperture', 'comparison', 'comparisonSide', 'testSide', 'fixationStyle'];
+  var LAYOUT_BOOL = ['linked', 'fixation', 'fusionBox', 'sideBySide'];
   function syncExperimenter() {
     ['participant', 'condition', 'notes'].forEach(function (k) { if (document.activeElement !== $(k)) $(k).value = S[k]; });
     LAYOUT_NUM.concat(LAYOUT_SEL).forEach(function (k) { var i = $('lay-' + k); if (document.activeElement !== i) i.value = S.layout[k]; });
     LAYOUT_BOOL.forEach(function (k) { $('lay-' + k).checked = S.layout[k]; });
     $('lay-leftEye').disabled = $('lay-rightEye').disabled = S.layout.linked;
     $('lay-sigma').disabled = S.layout.aperture !== 'gaussian';
+    ['separation', 'vertical', 'fixation'].forEach(function (k) { $('lay-' + k).disabled = S.layout.fusionBox; });
+    ['boxSize', 'boxSepX', 'boxSepY', 'rotLeft', 'rotRight', 'sideBySide', 'fixationStyle'].forEach(function (k) { $('lay-' + k).disabled = !S.layout.fusionBox; });
+    ['sideOffset', 'testSide'].forEach(function (k) { $('lay-' + k).disabled = !S.layout.fusionBox || !S.layout.sideBySide; });
+    $('alignGo').disabled = !S.layout.fusionBox;
+    $('alignInfo').textContent = ui.align ? 'ALIGNMENT RUNNING: waiting for the participant to press Enter' :
+      'Boxes ±' + S.layout.boxSepX + '°, vertical ' + S.layout.boxSepY + '°, rotation L ' + S.layout.rotLeft + '° / R ' + S.layout.rotRight + '°';
     document.querySelectorAll('#visButtons [data-vis]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.vis === S.layout.visibility)); });
     $('toggleShowing').disabled = S.layout.comparison !== 'toggle';
     $('toggleInfo').textContent = S.layout.comparison === 'toggle' ? 'showing: ' + S.layout.toggleShowing : '';
@@ -692,6 +703,7 @@
     ui.pendingResume = false;
     closeStart();
     replaceSession(next, participant ? 'Session started: ' + sessionLabel(next) : 'Practice session started (no participant ID).');
+    if (S.layout.fusionBox) startAlignment();
   }
   $('startForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -991,6 +1003,48 @@
   }
   function startLearn() { midi.learn = { i: 0, buf: [], map: {}, msg: '' }; learnPrompt(); }
 
+  // ------------------------------------------------------------------ alignment (copies FixBorders() from the lab battery)
+  var ALIGN_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '4', '6', 'l', 'L', 'r', 'R', '7', '9', '0', 'Enter'];
+  function startAlignment() {
+    if (!S.layout.fusionBox) { toast('Turn on the fusion box first.'); return; }
+    ui.align = { selected: null, startedAt: new Date().toISOString(), before: {
+      boxSepX: S.layout.boxSepX, boxSepY: S.layout.boxSepY, rotLeft: S.layout.rotLeft, rotRight: S.layout.rotRight } };
+    C.log(S, 'alignment-start', {});
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    refresh(); broadcast();
+  }
+  function alignKey(key) {
+    if (!ui.align) return false;
+    var L = S.layout, step = 0.05, cstep = 0.05, set = function (k, v) { C.setLayout(S, k, Number(v.toFixed(4)), { quiet: true }); };
+    var clampRot = function (v) { return Math.max(-45, Math.min(45, v)); };
+    if (key === 'Enter') {
+      C.log(S, 'alignment-accepted', { boxSepX: L.boxSepX, boxSepY: L.boxSepY, rotLeft: L.rotLeft, rotRight: L.rotRight,
+        calContrastLeft: L.calContrastLeft, calContrastRight: L.calContrastRight, before: ui.align.before });
+      ui.align = null;
+      toast('Alignment accepted.');
+    }
+    else if (key === 'ArrowRight') set('boxSepX', L.boxSepX + step);
+    else if (key === 'ArrowLeft') set('boxSepX', L.boxSepX - step);
+    else if (key === 'ArrowUp') set('boxSepY', L.boxSepY + step);
+    else if (key === 'ArrowDown') set('boxSepY', L.boxSepY - step);
+    else if (key === '4') { if (L.calContrastRight <= 0.99999) set('calContrastRight', Math.min(1, L.calContrastRight + cstep)); else set('calContrastLeft', Math.max(0, L.calContrastLeft - cstep)); }
+    else if (key === '6') { if (L.calContrastLeft <= 0.99999) set('calContrastLeft', Math.min(1, L.calContrastLeft + cstep)); else set('calContrastRight', Math.max(0, L.calContrastRight - cstep)); }
+    else if (key === 'l' || key === 'L') ui.align.selected = 'left';
+    else if (key === 'r' || key === 'R') ui.align.selected = 'right';
+    else if ((key === '7' || key === '9') && ui.align.selected) {
+      var k = ui.align.selected === 'left' ? 'rotLeft' : 'rotRight';
+      set(k, clampRot(L[k] + (key === '7' ? -1 : 1)));
+    }
+    else if (key === '0') {
+      var d = C.defaultLayout();
+      ['boxSepX', 'boxSepY', 'rotLeft', 'rotRight', 'calContrastLeft', 'calContrastRight'].forEach(function (x) { set(x, d[x]); });
+    }
+    else return false;
+    refresh(); broadcast(); scheduleSave();
+    return true;
+  }
+  $('alignGo').addEventListener('click', startAlignment);
+
   // ------------------------------------------------------------------ nulling
   var NULL_LABELS = { nulled: 'looks straight', 'not-nullable': "can't be made straight", unstable: 'keeps changing', 'cannot-tell': "can't tell" };
   var CHECK_LABELS = { opposite: 'other eye: opposite distortion', straight: 'other eye: also straight', 'like-original': 'other eye: like the original', 'cannot-tell': "other eye: can't tell" };
@@ -1181,6 +1235,9 @@
     var t = e.target;
     if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && (t.type === 'text' || !t.type))) return;
     var mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
+    if (ui.align && !mod && !e.altKey && t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && !$('startDialog').open && ALIGN_KEYS.indexOf(e.key) >= 0) {
+      e.preventDefault(); alignKey(e.key); return;
+    }
     if (ui.stereo.on && !mod && !e.altKey && t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && !$('startDialog').open) {
       var ka = K.keyAction(e.key, e.shiftKey);
       if (ka) { e.preventDefault(); stereoAction(ka.action, ka.steps, 'keyboard'); return; }

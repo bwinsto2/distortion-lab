@@ -430,3 +430,16 @@ class TestMigration(unittest.TestCase):
         self.assertEqual(M.render_gray(old, 48, g), M.render_gray(m, 48, g))
         s["work"]["recon"] = old
         M.validate_session(s)
+
+
+class TestLayoutMigration(unittest.TestCase):
+    def test_old_layout_without_fusion_box_fields_validates(self):
+        with open(EXAMPLE, encoding="utf-8") as f:
+            s = json.load(f)
+        for k in ("fusionBox", "sideBySide", "boxSize", "boxSepX", "boxSepY", "rotLeft", "rotRight",
+                  "calContrastLeft", "calContrastRight", "sideOffset", "testSide", "fixationStyle"):
+            s["layout"].pop(k, None)
+        M.validate_session(s)
+        s["layout"]["rotLeft"] = 90
+        with self.assertRaises(M.ValidationError):
+            M.validate_session(s)

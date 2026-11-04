@@ -479,3 +479,15 @@ test('nulling: start, record, other-eye check, repeat, end; undoable and saved i
   assert.equal(J(s.work.recon), J(C.identityRecon(s.reference)), 'end is undoable');
   assert.equal(s.nulls.length, 2);
 });
+
+test('sessions saved before the fusion-box settings load with the lab-battery defaults', () => {
+  const s = C.newSession();
+  const old = JSON.parse(J(s));
+  ['fusionBox', 'sideBySide', 'boxSize', 'boxSepX', 'boxSepY', 'rotLeft', 'rotRight', 'calContrastLeft', 'calContrastRight', 'sideOffset', 'testSide', 'fixationStyle']
+    .forEach((k) => delete old.layout[k]);
+  const v = C.validateSession(old);
+  assert.equal(v.layout.boxSize, 15); assert.equal(v.layout.boxSepX, 9); assert.equal(v.layout.fixationStyle, 'nonius');
+  assert.equal(v.layout.fusionBox, true); assert.equal(v.layout.sideOffset, 3);
+  assert.throws(() => C.setLayout(s, 'rotLeft', 90), /rotLeft/);
+  assert.throws(() => C.setLayout(s, 'fixationStyle', 'dot'));
+});

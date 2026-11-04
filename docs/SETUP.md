@@ -103,3 +103,43 @@ mouse or keys (Adjust ↔ Compare) until it looks straight. Record the result, o
 
 Note on viewing with both eyes: in a mirror stereoscope the two halves are seen in the same direction, so the two
 eyes' pictures overlap and can rival. Switching eyes, or nulling against nothing, avoids that.
+
+## Fusion box, nonius fixation and alignment (from the lab battery)
+
+These copy `FixBorders()` in `Functions_BinocularBattery.py` and the per-eye rotation in `BinocularDisplay.py`.
+
+**The display**
+- Each eye's half shows the same **15° × 15° viewing area** framed by **0.5° black/white border pieces**: 4 per
+  horizontal side, 5 per vertical side, corners empty.
+- The boxes are centred **±9°** from the middle of the screen (the battery's 18° border separation).
+- **Nonius fixation:** a **horizontal bar for the left eye** and a **vertical bar for the right eye** (2° × 0.2°), each
+  with a **1°-radius circle** touching the bar ends. When fused and aligned, this looks like one circle with a centred cross.
+- Each eye's image is clipped to its own half of the screen, and can be rotated about its box centre.
+
+**Side by side:** inside the box, the test grating sits **3° left of fixation** in the amblyopic eye's half, and the
+match **3° right** in the fellow eye's half. After fusion they appear next to each other, so nothing overlaps or
+rivals. Offset and side are settings in the Experimenter tab. In Choose mode, the test sits on the fixation point with
+the ring of options around it.
+
+**Alignment** runs automatically after a new session starts, and can be rerun from the Experimenter tab with
+**Run alignment**. The participant uses the battery's keys:
+
+| Key | Action |
+|---|---|
+| ← → | move the boxes apart / together (0.05°) |
+| ↑ ↓ | right box up, left box down / the reverse (0.05°) |
+| 4 / 6 | lower the left / right eye's contrast (an aid; it restores the other eye first) |
+| L / R | select the left / right image |
+| 7 / 9 | rotate the selected image 1° counter-clockwise / clockwise |
+| 0 | reset position, contrast and both rotations |
+| Enter | accept |
+
+The keys work in the console (outside text boxes) and in the stimulus window. In the stimulus window the mouse also
+works: scroll moves the boxes apart or together, Shift+scroll moves them vertically, and a click accepts. Each
+accepted alignment is logged with all its values. The result carries over to the next session's layout.
+
+**Screen size:** the boxes need about 34° of screen width. Set **pixels per degree** for your monitor and viewing
+distance (Experimenter tab → calculator); the app warns if a box doesn't fit its half. For reference, the battery
+used a 4K screen at 100 cm, about 110 px/°.
+
+With the fusion box off, the app uses the earlier layout (centre separation % and right-panel vertical offset).

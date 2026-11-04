@@ -428,7 +428,7 @@ def validate_session(s):
     _str(s.get("condition"), 120, "condition")
     _str(s.get("notes"), 20000, "notes")
     validate_reference(s.get("reference"))
-    validate_layout(s.get("layout"))
+    validate_layout(s.get("layout"), fill_defaults=True)  # older sessions lack newer layout fields
     validate_work(s.get("work"))
     for k in ("undo", "redo", "proposals", "descriptions", "accepted", "actions"):
         if not isinstance(s.get(k), list):
