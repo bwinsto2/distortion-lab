@@ -19,6 +19,10 @@
   <div class="actions">
     <button id="undo" title="Undo (Ctrl/Cmd+Z)">Undo</button>
     <button id="redo" title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+    <button id="tutBack" class="small" hidden title="Go back one tutorial step">◀ Step</button>
+    <button id="tutSkip" class="small" hidden title="Skip this tutorial step">Step ▶</button>
+    <button id="tutGo" title="Teach the participant the mouse controls, with practice and feedback, in the stereoscope">Controls tutorial</button>
+    <button id="recalBoxes" title="Run the fusion-box alignment again, starting from the current positions (key C)">Recalibrate boxes</button>
     <label class="toggle" title="Hide experimenter controls and researcher labels"><input type="checkbox" id="participantMode"> Participant layout</label>
     <button id="openStimulus" title="Open the stimulus presentation window">Open stimulus window</button>
   </div>
@@ -53,6 +57,7 @@
     </div>
   </form>
 </dialog>
+<div id="inactiveBanner" class="banner warn" hidden role="alert"><strong>This console is not in control.</strong> Another Distortion Lab console tab took over the stimulus window, so input from it is ignored here and this tab sends nothing to it. Close the tabs you are not using. <button id="takeControl" class="primary">Use this console</button></div>
 <div id="browserOnly" class="banner warn" hidden>
   <strong>Browser-only mode.</strong> The Python backend is not reachable, so this page autosaves only to this browser's local storage.
   Not available here: server-side session files and SQLite index, Python-rendered export bundles, the AI bridge, and external dial control.
@@ -253,6 +258,14 @@
       </div>
       <p class="note">When on, the participant works entirely inside the stereoscope with the mouse, the knobs and buttons, or the keyboard. Three steps: <strong>Choose</strong> (8 starting pictures in a ring around the centre; with both eyes, the amblyopic eye's test grating appears in the middle), <strong>Adjust</strong> (one control at a time) and <strong>Compare</strong> (flip through nearby versions). Keyboard: ← → turn knob (Shift = ×5) · ↑ ↓ choose control / page · Enter = press knob · Space = switch eye (amblyopic → fellow → both) · M = mode (Choose → Adjust → Compare) · N = new alternatives · Z = undo. Keys work in this window (outside text boxes) and in the stimulus window.</p>
       <div class="row wrap">
+        <label>Mouse wheel speed in Adjust <input id="wheelGain" type="number" min="0.5" max="3" step="0.05" style="width:5em"> ×</label>
+        <span class="muted">1 = one step per wheel notch; 1.75 (the default) = 75% faster. Only the mouse wheel, only in Adjust.</span>
+      </div>
+      <div class="row wrap">
+        <span><strong>Controls tutorial:</strong></span>
+        <span id="tutInfo" class="muted">Teaches the participant every mouse control in the stereoscope, with practice and "correct / incorrect control" feedback. Use the <em>Controls tutorial</em> button at the top. Practice does not change the session.</span>
+      </div>
+      <div class="row wrap">
         <button id="midiConnect">Connect MIDI controller</button>
         <button id="midiLearn" disabled>Set up buttons and knobs…</button>
         <span id="midiStatus" class="muted">No controller connected</span>
@@ -329,10 +342,15 @@
       <p class="note">Alignment follows the lab battery (FixBorders): the participant uses ← → to move the boxes apart/together, ↑ ↓ to move them vertically, 4 / 6 to lower one eye's contrast, L or R then 7 / 9 to rotate that eye's image by 1°, 0 to reset and Enter to accept. In the stimulus window, the mouse also works: scroll moves the boxes apart or together, Shift+scroll moves them vertically, and a click accepts. Alignment runs automatically after a new session starts while the fusion box is on. With the fusion box on, "Centre separation" and "Right panel vertical offset" above are not used.</p>
       <div class="row"><button id="toggleShowing">Toggle shown stimulus</button><span id="toggleInfo" class="muted"></span></div>
       <p class="note">Screen positions do not isolate the eyes: the mirror stereoscope does. Eye labels are metadata recorded with the session. Pixels per degree is nominal until measured through the stereoscope; no gamma or timing calibration is provided. Sequential/toggle modes show reference and reconstruction alternately at one position (one eye's channel).</p>
+      <div class="row wrap">
+        <label title="PsychoPy-style monitor profiles (display_config/profiles). Sets pixels per degree exactly as PsychoPy's deg2pix, in screen pixels, so sizes match the lab battery whatever the desktop scaling.">Monitor profile
+          <select id="monProfile"><option value="">(none)</option></select></label>
+        <button id="monApply">Use profile</button><span id="monOut" class="muted"></span>
+      </div>
       <details><summary>Nominal visual-angle calculator</summary>
         <div class="row wrap">
           <label>Optical viewing distance (cm) <input id="calDist" type="number" value="57" step="0.5" class="num"></label>
-          <label>Pixels per cm (CSS px) <input id="calPxcm" type="number" value="37.8" step="0.1" class="num"></label>
+          <label>Screen pixels per cm <input id="calPxcm" type="number" value="64.35" step="0.01" class="num"></label>
           <button id="calApply">Set ppd</button><span id="calOut" class="muted"></span>
         </div>
       </details>
@@ -360,6 +378,7 @@
 <script src="js/core.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/controller.js"></script>
+<script src="js/tutorial.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@ view a grating through the amblyopic eye in a dichoptic mirror stereoscope. They
 distortion with an adjustable picture viewed through the fellow eye. This is a research tool. It is not a medical
 diagnosis tool and not a drug-administration protocol.
 
-Version 0.3.0. Runs entirely on the lab computer: a small Python (3.9+, standard library only) backend plus a
+Version 0.3.1. Runs entirely on the lab computer: a small Python (3.9+, standard library only) backend plus a
 browser UI. No internet connection, accounts or AI are needed.
 
 ![Gallery](docs/screenshots/01-gallery.png)

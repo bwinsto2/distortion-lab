@@ -113,7 +113,7 @@
         "min": 10,
         "max": 300,
         "default": 80,
-        "unit": "px/° (nominal, CSS px)"
+        "unit": "screen px/° (as PsychoPy deg2pix; set from the monitor profile)"
       },
       "separation": {
         "min": 10,
@@ -178,7 +178,7 @@
       "sideOffset": {
         "min": 0,
         "max": 7,
-        "default": 3,
+        "default": 4.5,
         "unit": "° from fixation to each stimulus centre (side by side)"
       }
     },

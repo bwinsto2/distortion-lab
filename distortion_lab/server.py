@@ -2,7 +2,7 @@
 
 Binds to 127.0.0.1 by default. Serves the web UI from ./web and a small JSON API:
 
-  GET  /api/status                       version, storage location, AI status
+  GET  /api/status                       version, storage location, AI status, monitor profiles
   GET  /api/sessions                     list saved sessions (index from SQLite)
   GET  /api/sessions/<id>                load a session
   PUT  /api/sessions/<id>                validate + save a session (autosave target)
@@ -97,11 +97,49 @@ def validate_control(msg):
     return out
 
 
+DEFAULT_PROFILE_DIRS = (os.path.join(os.path.expanduser("~"), "experiments", "display_config", "profiles"),)
+
+
+def profile_ppd(width_cm, distance_cm, width_px):
+    """Screen pixels per degree exactly as PsychoPy's deg2pix: deg2cm uses the constant 0.017455 cm/deg/cm (~tan 1 deg)."""
+    return distance_cm * 0.017455 * width_px / width_cm
+
+
+def load_monitor_profiles(directory=None):
+    """Read PsychoPy-style monitor profiles ({"geometry"|"calibration": {"width", "distance", "sizePix"}} or the same keys at top level).
+
+    Searches `directory`, else $DISTORTION_LAB_MONITOR_PROFILES, else the lab's shared display_config/profiles. Missing or
+    malformed files are skipped: profiles are a convenience, never required.
+    """
+    directory = directory or os.environ.get("DISTORTION_LAB_MONITOR_PROFILES")
+    dirs = [directory] if directory else [d for d in DEFAULT_PROFILE_DIRS if os.path.isdir(d)]
+    out = []
+    for d in dirs:
+        try:
+            names = sorted(n for n in os.listdir(d) if n.endswith(".json"))
+        except OSError:
+            continue
+        for n in names:
+            try:
+                with open(os.path.join(d, n), encoding="utf-8") as f:
+                    j = json.load(f)
+                c = (j.get("geometry") or j.get("calibration") or j) if isinstance(j, dict) else {}
+                w, dist, px = float(c["width"]), float(c["distance"]), [int(v) for v in c["sizePix"]]
+                if w <= 0 or dist <= 0 or len(px) != 2 or min(px) <= 0:
+                    continue
+            except (OSError, ValueError, KeyError, TypeError, AttributeError):
+                continue
+            out.append({"name": n[:-5], "path": os.path.join(d, n), "widthCm": w, "distanceCm": dist, "sizePix": px,
+                        "ppd": round(profile_ppd(w, dist, px[0]), 3)})
+    return out
+
+
 class App:
-    def __init__(self, data_dir, env=None):
+    def __init__(self, data_dir, env=None, monitor_dir=None):
         self.storage = Storage(data_dir)
         self.bridge = Bridge(env)
         self.hub = ControlHub()
+        self.monitor_dir = monitor_dir
 
 
 def make_handler(app):
@@ -202,7 +240,7 @@ def make_handler(app):
             st = app.storage
             if parts == ["status"] and method == "GET":
                 return self._send(200, {"ok": True, "version": VERSION, "dataDir": st.dir, "ai": app.bridge.status(),
-                                        "python": sys.version.split()[0]})
+                                        "python": sys.version.split()[0], "monitors": load_monitor_profiles(app.monitor_dir)})
             if parts == ["sessions"] and method == "GET":
                 return self._send(200, {"ok": True, "sessions": st.list_sessions()})
             if len(parts) >= 2 and parts[0] == "sessions":
@@ -472,7 +510,12 @@ def main(argv=None):
     ap.add_argument("--port", type=int, default=int(os.environ.get("DISTORTION_LAB_PORT", "8765")))
     ap.add_argument("--data", default=None, help="data directory (default ./data or $DISTORTION_LAB_DATA)")
     ap.add_argument("--no-browser", action="store_true", help="do not open a browser window")
+    ap.add_argument("--monitor-profiles", default=None, metavar="DIR",
+                    help="folder of PsychoPy-style monitor profiles (default $DISTORTION_LAB_MONITOR_PROFILES or "
+                         "~/experiments/display_config/profiles)")
     a = ap.parse_args(argv)
+    if a.monitor_profiles:
+        os.environ["DISTORTION_LAB_MONITOR_PROFILES"] = os.path.abspath(a.monitor_profiles)
     httpd, note = start_server(a.host, a.port, a.data)
     port = httpd.server_address[1]
     httpd.app.shutdown_token = secrets.token_hex(16)
@@ -491,6 +534,8 @@ def main(argv=None):
     print("  stimulus: %sstimulus.html (or use 'Open stimulus window' in the console)" % url)
     print("  data:     %s" % httpd.app.storage.dir)
     print("  AI:       %s" % httpd.app.bridge.status()["label"])
+    mons = load_monitor_profiles(httpd.app.monitor_dir)
+    print("  monitors: %s" % (", ".join("%s (%.1f px/deg)" % (m["name"], m["ppd"]) for m in mons) or "no profiles found"))
     print("Press Ctrl+C to stop.")
     if not a.no_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()

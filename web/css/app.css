@@ -128,3 +128,4 @@ body.nolabels .tile .cap.lbl { display: none; }
 .resume-box { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--active); margin-bottom: 8px; }
 .resume-box p { margin: 0 0 8px; }
 .start-error { color: var(--bad); margin: 0; min-height: 1.2em; }
+header .actions button.warn { background: var(--warn-bg); font-weight: 600; }

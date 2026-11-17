@@ -76,6 +76,33 @@ Blank halves stay at the same mid-grey as the background, so switching doesn't c
 **Set up buttons and knobs…**, then follow the steps: turn or press each control once. The setup is remembered on that
 computer. For the X-Touch Mini, use its **MC mode** (the "MC" button), where the knobs send relative turns.
 
+**Text in the stereoscope.** All participant-facing text (the menu, the alignment instructions and the tutorial)
+is drawn 1.5× its original size and always in the **fellow eye's half** (the alignment text and the tutorial text in
+both halves), at the place that fuses with the picture being worked on, even when only the amblyopic eye is being
+shown or adjusted. Long lines wrap to fit inside the fusion box.
+
+**Controls tutorial.** Click **Controls tutorial** in the console's top bar (visible in every layout) to teach the
+participant the mouse in the stereoscope before the task. There are 12 short steps covering the distortion task only
+(calibrating the fusion boxes is not part of it): Choose (scroll the highlight to a marked picture, click), Adjust (scroll a bar to a marker, click
+for the next setting), switching steps (middle click), Compare (hold for new versions, scroll to version C, click to
+keep), switching eyes (right click) and undo. For undo, the tutorial shows an on-screen **Undo** button with its own arrow (drawn in both eyes, moved by the mouse) for mice without a "back" side button; Z and the back button also work. That button exists only in the tutorial. Each step explains what that part of the task does to the picture (and, in Adjust, what the highlighted setting changes), names the
+control, and has the participant practise it **3 times** (3 rounds, with a new target each round where there is one), except choosing in the ring and asking for new versions, which are practised once. Every input gets **"Correct control!"** or **"Incorrect control: that was
+… Instead, …"**, and the step moves on once it is done. **◀ Step / Step ▶** go back or skip; **End tutorial** stops it.
+Practice uses the tutorial's own pictures and box positions, so the session's reconstruction, alignment and undo
+history are untouched. Each step's correct and incorrect counts and time are logged (`tutorial-step`,
+`tutorial-end`).
+
+**Adjusting speed in the stereoscope.** One participant step (a wheel notch, knob click or ← →) moves the
+highlighted setting by about 1/40 of its range, kept between the setting's fine and coarse steps (e.g. Bend amount
+0.015°, Bend spacing 0.1°, Stripe orientation 1°, Stripe frequency 0.1 c/°). The mouse wheel then moves 1.75 of
+those per notch on average (1, 2, 2, 2, …), adjustable in the Experimenter tab (*Mouse wheel speed in Adjust*, 0.5–3,
+remembered on that computer). Shift+scroll is 5×. The tutorial's Adjust practice uses exactly the same steps. The
+console's own sliders and its fine/coarse setting are unaffected.
+
+**Spacing.** The ring of 8 pictures in Choose spreads out to use the free space in the fusion box (up to 1.5
+diameters centre to centre), and the side-by-side offset default is 4.5° (sessions still on the old 3° default move
+to 4.5° when started or opened; other values are kept), so the pictures don't run into each other after fusion.
+
 **Mouse** (no extra hardware): in the stimulus window, scroll = knob (Shift+scroll = 5 clicks), left click = press,
 **hold** left button about 1 s = new alternatives, right click = switch eye, middle click (press the wheel) =
 next mode (Choose / Adjust / Compare), side "back" button = undo, side "forward" button = new alternatives. The first click locks the pointer
@@ -116,13 +143,22 @@ These copy `FixBorders()` in `Functions_BinocularBattery.py` and the per-eye rot
   with a **1°-radius circle** touching the bar ends. When fused and aligned, this looks like one circle with a centred cross.
 - Each eye's image is clipped to its own half of the screen, and can be rotated about its box centre.
 
-**Side by side:** inside the box, the test grating sits **3° left of fixation** in the amblyopic eye's half, and the
-match **3° right** in the fellow eye's half. After fusion they appear next to each other, so nothing overlaps or
+**Side by side:** inside the box, the test grating sits **4.5° left of fixation** in the amblyopic eye's half, and the
+match **4.5° right** in the fellow eye's half. After fusion they appear next to each other, so nothing overlaps or
 rivals. Offset and side are settings in the Experimenter tab. In Choose mode, the test sits on the fixation point with
 the ring of options around it.
 
-**Alignment** runs automatically after a new session starts, and can be rerun from the Experimenter tab with
-**Run alignment**. The participant uses the battery's keys:
+**Alignment** runs automatically after a new session starts.
+
+**Recalibrating** (for example when the participant accepted too early or the boxes have drifted apart): click
+**Recalibrate boxes** in the console's top bar (visible in every layout, including Participant layout), or press **C**
+in the console or the stimulus window. It can be done at any point in the session; the task carries on where it was
+once the new alignment is accepted. It starts from the current positions, so only the error needs correcting (0 still
+resets everything). While it runs the button reads **Cancel recalibration**, which puts the boxes back exactly as they
+were. Starts, cancels and accepts are all logged with the values before and after. (**Run alignment** in the
+Experimenter tab does the same.)
+
+The participant uses the battery's keys:
 
 | Key | Action |
 |---|---|

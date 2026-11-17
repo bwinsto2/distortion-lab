@@ -1,7 +1,7 @@
 """Renderer/state boundary for external presentation software (e.g. PsychoPy).
 
 `stimulus_plan(session, window_w, window_h)` turns a saved session into plain data:
-which stimulus goes where (CSS/window pixels), its size, and its grey-level raster from
+which stimulus goes where (window pixels; layout.ppd is screen pixels per degree), its size, and its grey-level raster from
 the same Python reference renderer used for exports. It has no PsychoPy dependency, so
 it is unit-tested here; psychopy/adapter_example.py shows one way to display it.
 
@@ -17,7 +17,7 @@ from .model import validate_session, render_gray, reference_recon
 def stimulus_plan(session, window_w, window_h, raster_scale=1.0):
     s = validate_session(session)
     L = s["layout"]
-    d = L["diameter"] * L["ppd"]                      # nominal pixels
+    d = L["diameter"] * L["ppd"]                      # screen pixels
     n = max(8, min(2048, int(math.ceil(d * raster_scale))))
     geom = {"diameter": L["diameter"], "sigma": L["sigma"], "aperture": L["aperture"]}
     centres = {"left": (window_w * (0.5 - L["separation"] / 200.0), window_h / 2.0),

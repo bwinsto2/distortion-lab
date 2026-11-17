@@ -15,6 +15,20 @@
     region: null, structureKey: null, galleryKey: null, seqStart: Date.now(), stimWin: null, display: null, pendingResume: false,
     preview: null, align: null, stereo: { on: false, eye: 'both', mode: 'choose', ctl: 0, lib: 0, status: '', statusUntil: 0 },
     descContext: 'still-different', saveState: { local: null, server: null, error: null }, lastDesc: null, aiSet: null };
+  // Participant controls tutorial (tutorial.js); created early so refresh() can always ask it for its state.
+  var tutorial = window.DLTutorial.create({
+    galleryItems: function () { return stereoLibrary(); },
+    stepMode: function () { return S.settings.sliderStep; },
+    wheelSteps: wheelSteps,
+    participantStep: participantStep,
+    log: function (type, payload) { C.log(S, type, payload); scheduleSave(); },
+    changed: function () { refresh(); broadcast(); },
+    ended: function (how) {
+      ui.stereo.mode = 'choose'; ui.stereo.eye = 'both';
+      toast(how === 'completed' ? 'Controls tutorial completed. Results are in the session log (tutorial-step / tutorial-end).' : 'Controls tutorial ended.', 6000);
+      refresh(); broadcast(); scheduleSave();
+    }
+  });
   var bc = ('BroadcastChannel' in window) ? new BroadcastChannel('distortion-lab-v2') : null;
 
   // ------------------------------------------------------------------ helpers
@@ -92,7 +106,10 @@
     midiMessage: function (bytes) { midiMessage(bytes); },
     startControllerSetup: function () { startLearn(); },
     stereoState: function () { return C.util.clone(ui.stereo); },
-    startAlignment: function () { startAlignment(); },
+    tutorial: function (cmd) { if (cmd === 'start') startTutorial(); else if (cmd === 'stop') tutorial.stop(); else if (cmd === 'next') tutorial.next(); else if (cmd === 'back') tutorial.back(); return tutorial.status(); },
+    wheelSteps: function (s, src, k) { return wheelSteps(s, src, k); },
+    startAlignment: function (why) { startAlignment(why || 'script'); },
+    cancelAlignment: function () { cancelAlignment(); },
     alignKey: function (k) { return alignKey(k); },
     alignState: function () { return C.util.clone(ui.align); }
   };
@@ -145,6 +162,11 @@
     refresh(); broadcast(); scheduleSave();
   }
   function stimMessage() {
+    if (tutorial.active()) {
+      var tp = tutorial.payload();
+      return { type: 'state', reference: S.reference, recon: tp.recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId, previewing: false,
+        view: { eye: 'both', overlay: null, ring: null }, task: null, align: tp.align ? { selected: null } : null, tutorial: tp.tutorial };
+    }
     var pv = previewInfo(), showPv = pv && (ui.stereo.on || $('previewOnStim').checked);
     var recon = showPv ? pv.cand.recon : S.work.recon;
     return { type: 'state', reference: S.reference, recon: recon, layout: S.layout, seqStart: ui.seqStart, sessionId: S.sessionId, previewing: !!showPv,
@@ -153,20 +175,55 @@
       align: ui.align ? { selected: ui.align.selected } : null };
   }
   function nulling() { return !!(S && S.task && S.task.kind === 'null'); }
+  // Only one console tab may drive the stimulus window. Every console hears the stimulus window over the
+  // BroadcastChannel, so with two tabs open each key was applied in both and the stimulus showed whichever tab sent
+  // last (different modes, different box positions). The newest console (or the one where "Use this console" was
+  // pressed) is in control; the others stop listening and sending until they take control back.
+  var consoleId = Math.random().toString(36).slice(2);
+  ui.inControl = true;
+  function claimControl() {
+    ui.inControl = true;
+    $('inactiveBanner').hidden = true;
+    if (bc) try { bc.postMessage({ type: 'console-claim', id: consoleId }); } catch (e) { /* ignore */ }
+    broadcast();
+  }
+  function loseControl() {
+    if (!ui.inControl) return;
+    ui.inControl = false;
+    $('inactiveBanner').hidden = false;
+    if (S) C.log(S, 'console-inactive', {});
+    toast('Another console tab took over the stimulus window.', 6000);
+  }
   function broadcast() {
-    if (!S) return;
+    if (!S || !ui.inControl) return;
     var m = stimMessage();
     if (bc) try { bc.postMessage(m); } catch (e) { /* ignore */ }
     if (ui.stimWin && !ui.stimWin.closed) try { ui.stimWin.postMessage(m, '*'); } catch (e) { /* ignore */ }
   }
+  var seenMids = [];
   function onStimMessage(m) {
     if (!m || typeof m !== 'object') return;
+    if (m.type === 'console-claim') { if (m.id !== consoleId) loseControl(); return; }
+    if (!ui.inControl) return;
+    // The stimulus window posts every message on both channels; apply each one once (otherwise every step doubles).
+    if (typeof m.mid === 'string') {
+      if (seenMids.indexOf(m.mid) >= 0) return;
+      seenMids.push(m.mid); if (seenMids.length > 200) seenMids.shift();
+    }
     if (m.type === 'hello') broadcast();
-    if (m.type === 'display' && typeof m.w === 'number') { ui.display = { w: m.w, h: m.h, dpr: m.dpr, fullscreen: !!m.fullscreen }; drawPreview(); }
+    if (m.type === 'display' && typeof m.w === 'number') { ui.display = { w: m.w, h: m.h, dpr: m.dpr, fullscreen: !!m.fullscreen }; drawPreview(); monitorStatus(); }
+    if (m.type === 'ignoredInput') { ignoredInput(); return; }
     if (m.type === 'alignKey' && typeof m.key === 'string') { alignKey(m.key); return; }
+    if (m.type === 'recalibrate') { startAlignment('stimulus-key'); return; }
     if (m.type === 'key' && typeof m.key === 'string') { var a = K.keyAction(m.key, !!m.shift); if (a) stereoAction(a.action, a.steps, 'keyboard'); }
     if (m.type === 'action' && K.ACTIONS.some(function (x) { return x.id === m.action; }) && typeof m.steps === 'number' && Math.abs(m.steps) <= 20)
       stereoAction(m.action, m.steps, 'mouse');
+  }
+  var lastIgnored = 0;
+  function ignoredInput() {               // the stimulus window got mouse input while participant controls were off
+    if (Date.now() - lastIgnored < 5000) return;
+    lastIgnored = Date.now();
+    toast('Mouse input in the stimulus window is ignored: participant controls are off (Experimenter tab, or turn on Participant layout).', 6000);
   }
   if (bc) bc.onmessage = function (e) { onStimMessage(e.data); };
   window.addEventListener('message', function (e) { if (e.source === ui.stimWin) onStimMessage(e.data); });
@@ -200,10 +257,10 @@
     var W = Math.round(cssW * DPR), H = Math.round(cssH * DPR);
     if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
     var sm = stimMessage();
-    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: sm.recon, layout: S.layout, view: sm.view, task: sm.task, align: sm.align },
-      { scale: cssW / disp.w, labels: true, now: Date.now(), timing: { seqStart: ui.seqStart } });
+    var info = D.drawDisplay(c.getContext('2d'), cssW, cssH, DPR, { reference: S.reference, recon: sm.recon, layout: S.layout, view: sm.view, task: sm.task, align: sm.align, tutorial: sm.tutorial },
+      { scale: cssW / disp.w, pixelRatio: (ui.display && ui.display.dpr) || 1, labels: true, now: Date.now(), timing: { seqStart: ui.seqStart } });
     // Warnings are evaluated at full stimulus-window scale.
-    var n = Math.max(8, Math.min(2048, Math.ceil(S.layout.diameter * S.layout.ppd * ((ui.display && ui.display.dpr) || 1))));
+    var n = Math.max(8, Math.min(2048, Math.ceil(S.layout.diameter * S.layout.ppd)));   // ppd is in screen pixels
     var w = []; var f = Math.max(S.reference.frequency, C.maxFrequency(S.work.recon));
     if (f * S.layout.diameter > n / 2) w.push('At the stimulus window resolution (' + n + ' samples across the aperture) the highest carrier frequency exceeds the Nyquist limit.');
     else if (f * S.layout.diameter > n / 4) w.push('Fewer than four samples per carrier cycle in the stimulus window; fine detail is poorly sampled.');
@@ -607,6 +664,11 @@
     ['boxSize', 'boxSepX', 'boxSepY', 'rotLeft', 'rotRight', 'sideBySide', 'fixationStyle'].forEach(function (k) { $('lay-' + k).disabled = !S.layout.fusionBox; });
     ['sideOffset', 'testSide'].forEach(function (k) { $('lay-' + k).disabled = !S.layout.fusionBox || !S.layout.sideBySide; });
     $('alignGo').disabled = !S.layout.fusionBox;
+    $('recalBoxes').disabled = !S.layout.fusionBox && !ui.align;
+    $('recalBoxes').textContent = ui.align ? 'Cancel recalibration' : 'Recalibrate boxes';
+    $('recalBoxes').title = ui.align ? 'Stop without accepting and put the boxes back where they were' :
+      'Run the fusion-box alignment again, starting from the current positions (key C)';
+    $('recalBoxes').classList.toggle('warn', !!ui.align);
     $('alignInfo').textContent = ui.align ? 'ALIGNMENT RUNNING: waiting for the participant to press Enter' :
       'Boxes ±' + S.layout.boxSepX + '°, vertical ' + S.layout.boxSepY + '°, rotation L ' + S.layout.rotLeft + '° / R ' + S.layout.rotRight + '°';
     document.querySelectorAll('#visButtons [data-vis]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.vis === S.layout.visibility)); });
@@ -626,10 +688,60 @@
   });
   $('calApply').addEventListener('click', function () {
     var d = Number($('calDist').value), pxcm = Number($('calPxcm').value);
-    var ppd = d * Math.tan(Math.PI / 180) * pxcm;
-    $('calOut').textContent = ppd.toFixed(1) + ' px/° (nominal: verify through the stereoscope)';
+    var ppd = d * 0.017455 * pxcm;                       // PsychoPy deg2cm constant; screen (not CSS) pixels
+    $('calOut').textContent = ppd.toFixed(1) + ' screen px/° (nominal: verify through the stereoscope)';
     if (isFinite(ppd)) Lab.setLayout('ppd', Math.round(ppd * 10) / 10);
   });
+
+  // Monitor profiles (from the backend): ppd in screen pixels, identical to PsychoPy deg2pix for the lab battery.
+  var LS_MON = 'distortion-lab-monitor-profile';
+  function monitorByName(n) { return (ui.monitors || []).filter(function (m) { return m.name === n; })[0] || null; }
+  function applyMonitor(m, why) {
+    if (!m) return;
+    try { localStorage.setItem(LS_MON, m.name); } catch (e) { /* ignore */ }
+    $('monProfile').value = m.name;
+    if (Math.abs(S.layout.ppd - m.ppd) > 1e-6) {
+      Lab.setLayout('ppd', m.ppd);
+      C.log(S, 'monitor-profile', { name: m.name, widthCm: m.widthCm, distanceCm: m.distanceCm, sizePix: m.sizePix, ppd: m.ppd, reason: why });
+      scheduleSave();
+    }
+    monitorStatus();
+  }
+  function monitorStatus() {
+    var m = monitorByName($('monProfile').value), msg = '';
+    if (m) {
+      msg = m.ppd.toFixed(2) + ' screen px/° (' + m.distanceCm + ' cm, ' + m.sizePix[0] + '×' + m.sizePix[1] + ')';
+      if (Math.abs(S.layout.ppd - m.ppd) > 1e-6) msg += ' · current ppd ' + S.layout.ppd + ' differs';
+      var d = ui.display;
+      if (d && d.fullscreen && Math.abs(Math.round(d.w * d.dpr) - m.sizePix[0]) > 2)
+        msg += ' · WARNING: stimulus window is ' + Math.round(d.w * d.dpr) + ' screen px wide, profile says ' + m.sizePix[0];
+    }
+    $('monOut').textContent = msg;
+  }
+  function loadMonitors(list) {
+    ui.monitors = Array.isArray(list) ? list : [];
+    var sel = $('monProfile');
+    sel.replaceChildren(el('option', { value: '', text: '(none)' }));
+    ui.monitors.forEach(function (m) { sel.append(el('option', { value: m.name, text: m.name + ' — ' + m.ppd.toFixed(1) + ' px/°' })); });
+    var remembered = null;
+    try { remembered = localStorage.getItem(LS_MON); } catch (e) { remembered = null; }
+    // ppd values saved before 0.3.1 were CSS pixels and are wrong as screen pixels, so a profile is always applied:
+    // the remembered one, else the lab battery's default (monty_100cm, as BinocularBattery_CA_workstation.py), else the only one.
+    var pick = monitorByName(remembered) || monitorByName('monty_100cm') || (ui.monitors.length === 1 ? ui.monitors[0] : null);
+    if (pick) {
+      var was = S.layout.ppd;
+      applyMonitor(pick, remembered === pick.name ? 'startup' : 'default');
+      if (Math.abs(was - pick.ppd) > 1e-6) toast('Monitor profile ' + pick.name + ': ' + pick.ppd.toFixed(2) + ' screen px/° (was ' + was + '). Change it on the Experimenter tab.', 7000);
+    }
+    else if (ui.monitors.length) toast('Choose a monitor profile (Experimenter tab) so sizes match the lab battery.', 8000);
+  }
+  $('monApply').addEventListener('click', function () {
+    var m = monitorByName($('monProfile').value);
+    if (!m) { toast('Choose a monitor profile first.'); return; }
+    applyMonitor(m, 'experimenter');
+    toast('Using ' + m.name + ': ' + m.ppd.toFixed(2) + ' screen px/°.');
+  });
+  $('monProfile').addEventListener('change', monitorStatus);
 
   function sessionDownload() {
     var copy = C.util.clone(S);
@@ -643,6 +755,16 @@
   function replaceSession(next, why) {
     S = next; ui.currentSet = null; ui.comboSet = null; ui.structureKey = null; ui.galleryKey = null; ui.lastDesc = null;
     $('refControls').replaceChildren();
+    // A started or opened session inherits a layout whose ppd may predate the monitor profile (or be a pre-0.3.1
+    // CSS-pixel value): the display in use is what sets pixels per degree.
+    var mon = monitorByName($('monProfile').value);
+    if (mon) applyMonitor(mon, 'session');
+    // The side-by-side offset default went from 3 deg to 4.5 deg (more room between the test and the match, so they do
+    // not run into each other after fusion). Sessions still on the old default move to the new one; other values stay.
+    if (S.layout.sideOffset === 3) {
+      C.setLayout(S, 'sideOffset', C.defaultLayout().sideOffset, { quiet: true });
+      C.log(S, 'layout-default-updated', { key: 'sideOffset', from: 3, to: S.layout.sideOffset });
+    }
     toast(why); changed(); saveNow();
   }
   function loadFile(f) {
@@ -703,7 +825,7 @@
     ui.pendingResume = false;
     closeStart();
     replaceSession(next, participant ? 'Session started: ' + sessionLabel(next) : 'Practice session started (no participant ID).');
-    if (S.layout.fusionBox) startAlignment();
+    if (S.layout.fusionBox) startAlignment('session-start');
   }
   $('startForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -737,9 +859,9 @@
     }).catch(function (e) { $('sessionList').textContent = e.message; });
   }
   function displayPNG() {
-    var disp = ui.display || { w: 1440, h: 900 };
-    var c = el('canvas', { width: disp.w, height: disp.h });
-    D.drawDisplay(c.getContext('2d'), disp.w, disp.h, 1, { reference: S.reference, recon: S.work.recon, layout: S.layout }, { scale: 1, now: Date.now(), timing: { seqStart: ui.seqStart } });
+    var disp = ui.display || { w: 1440, h: 900 }, pr = (ui.display && ui.display.dpr) || 1;   // full screen-pixel resolution
+    var c = el('canvas', { width: Math.round(disp.w * pr), height: Math.round(disp.h * pr) });
+    D.drawDisplay(c.getContext('2d'), disp.w, disp.h, pr, { reference: S.reference, recon: S.work.recon, layout: S.layout }, { scale: 1, now: Date.now(), timing: { seqStart: ui.seqStart } });
     return c.toDataURL('image/png');
   }
   function runChecks() {
@@ -868,6 +990,7 @@
   /** One controller action from a knob/button (MIDI), the keyboard, or the stimulus window. */
   function stereoAction(action, steps, source) {
     var st = ui.stereo;
+    if (tutorial.active()) { tutorial.action(action, steps, source); return true; }
     if (!st.on || !S || ui.pendingResume) return false;
     var sign = steps < 0 ? -1 : 1;
     if (action === 'eye') { st.eye = st.eye === 'AE' ? 'FE' : (st.eye === 'FE' ? 'both' : 'AE'); }
@@ -905,7 +1028,10 @@
         else if (cur.def.type === 'enum') {
           var ch = cur.def.choices, i = ch.indexOf(C.getValue(S.work.recon, cur.path));
           Lab.set(cur.path, ch[(i + sign + ch.length) % ch.length], { source: source, quiet: true });
-        } else act(function () { return C.nudge(S, cur.path, steps, { source: source }); }, true);
+        } else {
+          var n = wheelSteps(steps, source, cur.path), mult = Math.round(participantStep(cur.def) / cur.def.step);
+          if (n) act(function () { return C.nudge(S, cur.path, n * mult, { source: source, stepMode: 'fine' }); }, true);
+        }
       } else if (stereoSet()) cyclePreview(sign);
       else stereoFlash('Press "New alternatives" first');
     } else if (action === 'press') {
@@ -1003,17 +1129,85 @@
   }
   function startLearn() { midi.learn = { i: 0, buf: [], map: {}, msg: '' }; learnPrompt(); }
 
+  // ------------------------------------------------------------------ mouse wheel speed in Adjust
+  // Values snap to each control's step, so a gain of 1.75 is applied by carrying the remainder: 1, 2, 2, 2, ... steps
+  // per notch (75% more than one step per notch on average). The remainder resets when the control or the direction changes.
+  var WHEEL_KEY = 'distortion-lab-wheel-gain-v2';      // v2: default raised from 1.25 to 1.75; older saved values are ignored
+  ui.wheelGain = 1.75;
+  try { var wg = Number(localStorage.getItem(WHEEL_KEY)); if (wg >= 0.5 && wg <= 3) ui.wheelGain = wg; } catch (e) { /* default */ }
+  var wheelAcc = { key: null, v: 0 };
+  /**
+   * The step one participant "click" of the wheel/knob/arrow key moves a number setting by in the stereoscope (before the
+   * wheel gain): about 1/40 of the setting's range, kept between its fine and coarse steps and rounded to whole fine
+   * steps. The console's own sliders and fine/coarse setting are unaffected. The tutorial's Adjust practice uses the same.
+   */
+  function participantStep(def) {
+    var fine = def.step, coarse = def.coarseStep || def.step * 10;
+    var want = Math.min(coarse, Math.max(fine, (def.max - def.min) / 40));
+    return fine * Math.max(1, Math.round(want / fine));
+  }
+  function wheelSteps(steps, source, key) {
+    if (source !== 'mouse') return steps;
+    if (wheelAcc.key !== key || wheelAcc.v * steps < 0) wheelAcc = { key: key, v: 0 };
+    wheelAcc.v += steps * ui.wheelGain;
+    var n = wheelAcc.v < 0 ? Math.ceil(wheelAcc.v - 1e-9) : Math.floor(wheelAcc.v + 1e-9);
+    wheelAcc.v -= n;
+    return n;
+  }
+  $('wheelGain').value = ui.wheelGain;
+  $('wheelGain').addEventListener('change', function (e) {
+    var v = Number(e.target.value);
+    if (!(v >= 0.5 && v <= 3)) { e.target.value = ui.wheelGain; toast('Wheel speed must be between 0.5 and 3.'); return; }
+    ui.wheelGain = v;
+    try { localStorage.setItem(WHEEL_KEY, String(v)); } catch (err) { /* ignore */ }
+    if (S) { C.log(S, 'wheel-gain', { gain: v }); scheduleSave(); }
+  });
+
+  // ------------------------------------------------------------------ participant controls tutorial (tutorial.js)
+  function startTutorial() {
+    if (!S) return;
+    if (ui.align) { toast('Finish or cancel the box alignment first.'); return; }
+    if (nulling()) { toast('End nulling before starting the tutorial.'); return; }
+    if (!ui.stereo.on) setStereo(true);
+    ui.preview = null;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    tutorial.start();
+  }
+  function syncTutorial() {
+    var on = tutorial.active(), st = tutorial.status();
+    $('tutGo').textContent = on ? 'End tutorial' : 'Controls tutorial';
+    $('tutGo').classList.toggle('warn', on);
+    $('tutBack').hidden = $('tutSkip').hidden = !on;
+    if (on) $('tutGo').title = 'Step ' + st.index + '/' + st.total + ': ' + st.title + ' · this step ' + st.correct + ' correct, ' + st.incorrect +
+      ' incorrect · total ' + st.totalCorrect + ' / ' + st.totalIncorrect + '. Click to end the tutorial.';
+    else $('tutGo').title = 'Teach the participant the mouse controls, with practice and feedback, in the stereoscope';
+    $('tutInfo').textContent = on ? 'Running: step ' + st.index + ' of ' + st.total + ' (' + st.title + '). This step: ' + st.correct + ' correct, ' +
+      st.incorrect + ' incorrect. Total: ' + st.totalCorrect + ' correct, ' + st.totalIncorrect + ' incorrect.' :
+      'Teaches the participant every mouse control in the stereoscope, with practice and "correct / incorrect control" feedback. Use the Controls tutorial button at the top. Practice does not change the session.';
+  }
+  $('tutGo').addEventListener('click', function () { if (tutorial.active()) tutorial.stop(); else startTutorial(); });
+  $('tutBack').addEventListener('click', function () { tutorial.back(); });
+  $('tutSkip').addEventListener('click', function () { tutorial.next(); });
+
   // ------------------------------------------------------------------ alignment (copies FixBorders() from the lab battery)
   var ALIGN_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '4', '6', 'l', 'L', 'r', 'R', '7', '9', '0', 'Enter'];
-  function startAlignment() {
+  var ALIGN_FIELDS = ['boxSepX', 'boxSepY', 'rotLeft', 'rotRight', 'calContrastLeft', 'calContrastRight'];
+  // Starts from the current (last accepted) positions, so a participant's earlier error can be corrected rather than
+  // redone from scratch; 0 still resets to the defaults. `why` is logged ('session-start', 'console', 'key', ...).
+  function startAlignment(why) {
     if (!S.layout.fusionBox) { toast('Turn on the fusion box first.'); return; }
-    ui.align = { selected: null, startedAt: new Date().toISOString(), before: {
-      boxSepX: S.layout.boxSepX, boxSepY: S.layout.boxSepY, rotLeft: S.layout.rotLeft, rotRight: S.layout.rotRight } };
-    C.log(S, 'alignment-start', {});
+    if (ui.align) return;
+    if (tutorial.active()) { toast('End the controls tutorial before recalibrating the boxes.'); return; }
+    var before = {};
+    ALIGN_FIELDS.forEach(function (k) { before[k] = S.layout[k]; });
+    ui.align = { selected: null, startedAt: new Date().toISOString(), before: before, why: why || 'console' };
+    C.log(S, 'alignment-start', { why: ui.align.why, from: before });
+    if (why && why !== 'session-start') toast('Recalibrating the fusion boxes: the participant adjusts and presses Enter (or clicks) to accept.', 5000);
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     refresh(); broadcast();
   }
   function alignKey(key) {
+    if (tutorial.active()) return tutorial.alignKey(key);
     if (!ui.align) return false;
     var L = S.layout, step = 0.05, cstep = 0.05, set = function (k, v) { C.setLayout(S, k, Number(v.toFixed(4)), { quiet: true }); };
     var clampRot = function (v) { return Math.max(-45, Math.min(45, v)); };
@@ -1043,7 +1237,18 @@
     refresh(); broadcast(); scheduleSave();
     return true;
   }
-  $('alignGo').addEventListener('click', startAlignment);
+  // Stop a recalibration without accepting it: put the boxes back exactly where they were before it started.
+  function cancelAlignment() {
+    if (!ui.align) return;
+    var b = ui.align.before;
+    ALIGN_FIELDS.forEach(function (k) { if (typeof b[k] === 'number') C.setLayout(S, k, b[k], { quiet: true }); });
+    C.log(S, 'alignment-cancelled', { restored: b });
+    ui.align = null;
+    toast('Recalibration cancelled: the previous alignment is restored.');
+    refresh(); broadcast(); scheduleSave();
+  }
+  $('alignGo').addEventListener('click', function () { startAlignment('console'); });
+  $('recalBoxes').addEventListener('click', function () { if (ui.align) cancelAlignment(); else startAlignment('console'); });
 
   // ------------------------------------------------------------------ nulling
   var NULL_LABELS = { nulled: 'looks straight', 'not-nullable': "can't be made straight", unstable: 'keeps changing', 'cannot-tell': "can't tell" };
@@ -1110,6 +1315,7 @@
   }
   function refresh() {
     if (!S) return;
+    syncTutorial();
     $('sessionPill').textContent = ui.pendingResume ? 'No session' : sessionLabel(S);
     syncStereo();
     syncNulling();
@@ -1139,6 +1345,9 @@
   $('participantMode').addEventListener('change', function (e) {
     document.body.classList.toggle('participant', e.target.checked);
     C.log(S, 'participant-layout', { on: e.target.checked });
+    // The "Participant controls on" switch lives on the Experimenter tab, which this layout hides; without it the
+    // stimulus window ignores the mouse. The participant layout therefore turns participant controls on.
+    if (e.target.checked && !ui.stereo.on) setStereo(true);
     if (e.target.checked && (ui.tab === 'experimenter' || ui.tab === 'records' || ui.tab === 'nulling')) switchTab('gallery'); else refresh();
   });
   $('openStimulus').addEventListener('click', function () {
@@ -1234,7 +1443,12 @@
   document.addEventListener('keydown', function (e) {
     var t = e.target;
     if (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && (t.type === 'text' || !t.type))) return;
+    if (!ui.inControl && (ui.align || ui.stereo.on)) return;     // not in control: keys must not drive alignment or the stereoscope
     var mod = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
+    if (!ui.align && !mod && !e.altKey && (e.key === 'c' || e.key === 'C') && t.tagName !== 'INPUT' && t.tagName !== 'SELECT' &&
+        !$('startDialog').open && S.layout.fusionBox) {
+      e.preventDefault(); startAlignment('key'); return;
+    }
     if (ui.align && !mod && !e.altKey && t.tagName !== 'INPUT' && t.tagName !== 'SELECT' && !$('startDialog').open && ALIGN_KEYS.indexOf(e.key) >= 0) {
       e.preventDefault(); alignKey(e.key); return;
     }
@@ -1272,6 +1486,8 @@
   // ------------------------------------------------------------------ startup
   function start() {
     $('version').textContent = 'v' + C.VERSION;
+    $('takeControl').addEventListener('click', function () { claimControl(); if (S) C.log(S, 'console-claim', {}); toast('This console now controls the stimulus window.'); });
+    claimControl();
     if (window.DL_PREVIEW_NOTE) ['openStimulus', 'saveJson', 'pngRecon', 'pngRef', 'pngDisplay', 'serverExport', 'devRequest'].forEach(function (id) { $(id).hidden = true; });
     var saved = null;
     try { var raw = localStorage.getItem(LS_KEY); if (raw) saved = C.validateSession(JSON.parse(raw)); } catch (e) { saved = null; }
@@ -1286,7 +1502,7 @@
     fetch('api/status').then(function (r) { return r.json(); }).then(function (j) {
       backend = !!j.ok; aiStatus = j.ai;
       $('backendStatus').textContent = 'Backend connected'; $('backendStatus').className = 'pill ok'; $('backendStatus').title = 'Data folder: ' + j.dataDir + ' · Python ' + j.python;
-      connectControls(); updateAiUi(); scheduleSave();
+      connectControls(); updateAiUi(); loadMonitors(j.monitors); scheduleSave();
     }).catch(function () {
       backend = false;
       $('backendStatus').textContent = 'Browser-only'; $('backendStatus').className = 'pill off';
